@@ -21,6 +21,8 @@ interface Laser {
   mesh: THREE.Mesh;
   velocityZ: number;
   isEnemyLaser: boolean;
+  isSingularity?: boolean;
+  damage?: number;
 }
 
 export class SpaceGame {
@@ -35,6 +37,9 @@ export class SpaceGame {
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
   private animationFrameId: number | null = null;
+
+  // Custom configurations
+  private weaponMode = 'plasma_burst';
 
   // Space mechanics
   private score = 0;
@@ -74,7 +79,8 @@ export class SpaceGame {
     onScore: (score: number) => void,
     onHealth: (health: number) => void,
     onStatus: (status: GameStatus) => void,
-    settings: GameSettings
+    settings: GameSettings,
+    options?: { weaponMode?: string }
   ) {
     this.container = container;
     this.canvas = canvas;
@@ -82,6 +88,10 @@ export class SpaceGame {
     this.onHealth = onHealth;
     this.onStatus = onStatus;
     this.settings = settings;
+
+    if (options && options.weaponMode) {
+      this.weaponMode = options.weaponMode;
+    }
 
     this.initScene();
     this.initLights();
@@ -96,8 +106,9 @@ export class SpaceGame {
     const height = this.container.clientHeight || 500;
 
     this.scene = THREE.Scene ? new THREE.Scene() : new (THREE as any).Scene();
-    this.scene.background = new THREE.Color(0x010107);
-    this.scene.fog = new THREE.FogExp2(0x010107, 0.012);
+    // Rich deep midnight nebula space background yields high visual contrast
+    this.scene.background = new THREE.Color(0x060517);
+    this.scene.fog = new THREE.FogExp2(0x060517, 0.012);
 
     this.camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
     this.camera.position.set(0, 22, 15);
@@ -112,14 +123,15 @@ export class SpaceGame {
   }
 
   private initLights() {
-    const spaceAmbient = new THREE.AmbientLight(0x0e0c1f, 1.8);
+    // Significantly elevated background light levels to eliminate dark silhouette problems
+    const spaceAmbient = new THREE.AmbientLight(0x232042, 2.5);
     this.scene.add(spaceAmbient);
 
-    const nebulaPink = new THREE.DirectionalLight(0xd946ef, 1.8);
+    const nebulaPink = new THREE.DirectionalLight(0xd946ef, 2.2);
     nebulaPink.position.set(-10, -20, -50);
     this.scene.add(nebulaPink);
 
-    const spectRay = new THREE.DirectionalLight(0x06b6d4, 1.6);
+    const spectRay = new THREE.DirectionalLight(0x06b6d4, 2.2);
     spectRay.position.set(0, 40, 10);
     this.scene.add(spectRay);
   }
@@ -421,25 +433,62 @@ export class SpaceGame {
     if (this.status !== 'PLAYING') return;
     if (this.laserCooldown > 0) return;
 
-    this.laserCooldown = 0.16; // rapid laser fires
+    if (this.weaponMode === 'scatter_shotgun' || this.weaponMode === 'neutron_wave') {
+      // 2. penetrative/wide NEUTRON WAVE
+      this.laserCooldown = 0.38;
 
-    // Spawn lasers directly from the dual swept back cannon coordinates
-    const tipL = this.playerPos.clone().add(new THREE.Vector3(-1.4, 0, -0.6));
-    const tipR = this.playerPos.clone().add(new THREE.Vector3(1.4, 0, -0.6));
+      const tipCenter = this.playerPos.clone().add(new THREE.Vector3(0, 0, -1.0));
+      const waveGeom = new THREE.BoxGeometry(4.2, 0.08, 0.4);
+      const waveMat = new THREE.MeshBasicMaterial({ color: 0x10b981 }); // bright green fluorescent ring wave
+      const wMesh = new THREE.Mesh(waveGeom, waveMat);
+      wMesh.position.copy(tipCenter);
+      this.scene.add(wMesh);
 
-    const laserGeom = new THREE.BoxGeometry(0.12, 0.12, 0.95);
-    const laserMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+      this.lasers.push({
+        mesh: wMesh,
+        velocityZ: -42.0,
+        isEnemyLaser: false,
+        damage: 75
+      });
+    } else if (this.weaponMode === 'vortex_cannon' || this.weaponMode === 'singularity_charge') {
+      // 3. custom explosive SINGULARITY CHARGE
+      this.laserCooldown = 0.48;
 
-    const lMeshL = new THREE.Mesh(laserGeom, laserMat);
-    lMeshL.position.copy(tipL);
-    this.scene.add(lMeshL);
+      const tipCenter = this.playerPos.clone().add(new THREE.Vector3(0, 0, -1.2));
+      const coreGeom = new THREE.SphereGeometry(0.55, 8, 8);
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xf97316 }); // super neon hot orange
+      const cMesh = new THREE.Mesh(coreGeom, coreMat);
+      cMesh.position.copy(tipCenter);
+      this.scene.add(cMesh);
 
-    const lMeshR = new THREE.Mesh(laserGeom, laserMat);
-    lMeshR.position.copy(tipR);
-    this.scene.add(lMeshR);
+      this.lasers.push({
+        mesh: cMesh,
+        velocityZ: -24.0, // slower heavy singularity orb
+        isEnemyLaser: false,
+        isSingularity: true,
+        damage: 110
+      });
+    } else {
+      // 1. NEON PLASMA BURST (Dual light cyan bolts)
+      this.laserCooldown = 0.14;
 
-    this.lasers.push({ mesh: lMeshL, velocityZ: -48.0, isEnemyLaser: false });
-    this.lasers.push({ mesh: lMeshR, velocityZ: -48.0, isEnemyLaser: false });
+      const tipL = this.playerPos.clone().add(new THREE.Vector3(-1.4, 0, -0.6));
+      const tipR = this.playerPos.clone().add(new THREE.Vector3(1.4, 0, -0.6));
+
+      const laserGeom = new THREE.BoxGeometry(0.12, 0.12, 0.95);
+      const laserMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee }); // cyan light
+
+      const lMeshL = new THREE.Mesh(laserGeom, laserMat);
+      lMeshL.position.copy(tipL);
+      this.scene.add(lMeshL);
+
+      const lMeshR = new THREE.Mesh(laserGeom, laserMat);
+      lMeshR.position.copy(tipR);
+      this.scene.add(lMeshR);
+
+      this.lasers.push({ mesh: lMeshL, velocityZ: -60.0, isEnemyLaser: false, damage: 35 });
+      this.lasers.push({ mesh: lMeshR, velocityZ: -60.0, isEnemyLaser: false, damage: 35 });
+    }
   }
 
   private lastTime = 0;
@@ -514,24 +563,89 @@ export class SpaceGame {
           const distToE = l.mesh.position.distanceTo(e.mesh.position);
 
           if (distToE < (e.enemyType === 'boss' ? 4.5 : 1.5)) {
-            e.health -= 25;
             laserConsumed = true;
+            const dmg = l.damage || 25;
 
-            this.setMeshColorRecursive(e.mesh, 0xff0000);
-            setTimeout(() => {
-              if (e.mesh) this.setMeshColorRecursive(e.mesh, e.enemyType === 'boss' ? 0x8b5cf6 : 0xef4444);
-            }, 60);
+            if (l.isSingularity) {
+              // Create singularity explosion ring visualizer
+              const singularityBoom = new THREE.Mesh(
+                new THREE.RingGeometry(0.1, 4.5, 16),
+                new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+              );
+              singularityBoom.rotation.x = Math.PI / 2;
+              singularityBoom.position.copy(l.mesh.position);
+              this.scene.add(singularityBoom);
 
-            if (e.health <= 0) {
-              if (e.enemyType === 'boss') {
-                this.score += 5000;
-                this.onScore(this.score);
-                this.die('VICTORY');
-              } else {
-                this.score += 500;
-                this.onScore(this.score);
-                this.scene.remove(e.mesh);
-                this.enemies.splice(j, 1);
+              let ringTime = 0;
+              const animateRing = () => {
+                ringTime += 0.05;
+                singularityBoom.scale.addScalar(0.45);
+                (singularityBoom.material as THREE.MeshBasicMaterial).opacity -= 0.12;
+                if (ringTime < 0.45) {
+                  requestAnimationFrame(animateRing);
+                } else {
+                  this.scene.remove(singularityBoom);
+                }
+              };
+              animateRing();
+
+              // Splash damage to ALL close-by enemies!
+              for (let k = this.enemies.length - 1; k >= 0; k--) {
+                const innerE = this.enemies[k];
+                const sDist = l.mesh.position.distanceTo(innerE.mesh.position);
+                if (sDist <= 6.5) {
+                  innerE.health -= dmg;
+                  this.setMeshColorRecursive(innerE.mesh, 0xff0000);
+                  const defaultClr = innerE.enemyType === 'boss' ? 0x8b5cf6 : 0xef4444;
+                  setTimeout(() => {
+                    if (innerE.mesh) this.setMeshColorRecursive(innerE.mesh, defaultClr);
+                  }, 60);
+
+                  if (innerE.health <= 0) {
+                    if (innerE.enemyType === 'boss') {
+                      this.score += 5000;
+                      this.onScore(this.score);
+                      this.die('VICTORY');
+                    } else {
+                      this.score += 500;
+                      this.onScore(this.score);
+                      this.scene.remove(innerE.mesh);
+                      this.enemies.splice(k, 1);
+                    }
+                  }
+                }
+              }
+
+              // Also demolish close-by asteroids in the explosion radius!
+              for (let aIdx = this.asteroids.length - 1; aIdx >= 0; aIdx--) {
+                const ast = this.asteroids[aIdx];
+                const sDist = l.mesh.position.distanceTo(ast.mesh.position);
+                if (sDist <= 6.5) {
+                  this.scene.remove(ast.mesh);
+                  this.asteroids.splice(aIdx, 1);
+                  this.score += 200;
+                  this.onScore(this.score);
+                }
+              }
+            } else {
+              // Standard single target laser hit damage
+              e.health -= dmg;
+              this.setMeshColorRecursive(e.mesh, 0xff0000);
+              setTimeout(() => {
+                if (e.mesh) this.setMeshColorRecursive(e.mesh, e.enemyType === 'boss' ? 0x8b5cf6 : 0xef4444);
+              }, 60);
+
+              if (e.health <= 0) {
+                if (e.enemyType === 'boss') {
+                  this.score += 5000;
+                  this.onScore(this.score);
+                  this.die('VICTORY');
+                } else {
+                  this.score += 500;
+                  this.onScore(this.score);
+                  this.scene.remove(e.mesh);
+                  this.enemies.splice(j, 1);
+                }
               }
             }
             break;

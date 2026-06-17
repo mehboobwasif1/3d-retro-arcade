@@ -33,6 +33,12 @@ export default function GameStage({
   const [gameStatus, setGameStatus] = useState<GameStatus>('LOADING');
   const [showGuide, setShowGuide] = useState<boolean>(true);
 
+  // Custom pre-game customization options State
+  const [selectedCarModel, setSelectedCarModel] = useState<string>('cyber_coupe');
+  const [selectedLandscape, setSelectedLandscape] = useState<string>('cybercity');
+  const [selectedZombieWeapon, setSelectedZombieWeapon] = useState<string>('plasma_rifle');
+  const [selectedSpaceWeapon, setSelectedSpaceWeapon] = useState<string>('plasma_burst');
+
   // Resilient status reference for tracking in high frequency polling loop
   const gameStatusRef = useRef<GameStatus>('LOADING');
   useEffect(() => {
@@ -93,7 +99,8 @@ export default function GameStage({
           (s) => setScore(s),
           (nitro) => setHealth(nitro), // health represents Nitro fuel percentage
           (stat) => setGameStatus(stat),
-          settings
+          settings,
+          { carModel: selectedCarModel, landscapeTheme: selectedLandscape }
         );
       } else if (gameId === 'zombie') {
         gameInstance = new ZombieGame(
@@ -102,7 +109,8 @@ export default function GameStage({
           (s) => setScore(s),
           (h) => setHealth(h),
           (stat) => setGameStatus(stat),
-          settings
+          settings,
+          { weaponType: selectedZombieWeapon }
         );
       } else if (gameId === 'maze') {
         gameInstance = new MazeGame(
@@ -120,7 +128,8 @@ export default function GameStage({
           (s) => setScore(s),
           (h) => setHealth(h),
           (stat) => setGameStatus(stat),
-          settings
+          settings,
+          { weaponMode: selectedSpaceWeapon }
         );
       } else if (gameId === 'landscape') {
         gameInstance = new LandscapeGame(
@@ -313,7 +322,7 @@ export default function GameStage({
         gameInstanceRef.current = null;
       }
     };
-  }, [gameId]);
+  }, [gameId, selectedCarModel, selectedLandscape, selectedZombieWeapon, selectedSpaceWeapon]);
 
   // Handle final high scores check on game over or victory
   useEffect(() => {
@@ -617,7 +626,7 @@ export default function GameStage({
               {/* Controls Grid */}
               <div className="space-y-3 text-left">
                 <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider block">Operational Controls:</span>
-                <div className="space-y-2 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 max-h-[40vh] overflow-y-auto">
+                <div className="space-y-2 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 max-h-[30vh] overflow-y-auto w-full">
                   {getGameGuideContent().controls.map((ctrl, index) => (
                     <div key={index} className="flex flex-col sm:flex-row justify-between sm:items-center py-2 border-b border-slate-100 dark:border-slate-900 last:border-0 gap-1 font-mono">
                       <span className="text-xs font-bold text-yellow-600 dark:text-yellow-300">{ctrl.key}</span>
@@ -626,6 +635,99 @@ export default function GameStage({
                   ))}
                 </div>
               </div>
+
+              {/* CUSTOM GAME ARCADE CONFIGURATION PANEL */}
+              {gameId === 'racing' && (
+                <div className="space-y-4 text-left border border-purple-500/30 rounded-2xl p-4 bg-slate-950/90 shadow-inner z-50">
+                  <span className="text-[11px] font-mono text-purple-400 font-bold uppercase tracking-wider block">🚗 Customize Vehicle & Environment:</span>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Choose Machine Model:</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'cyber_coupe', name: 'Cyber Coupe', desc: 'Sleek neon style' },
+                        { id: 'neon_f1', name: 'Formula F1', desc: 'Ultra aerodynamic' },
+                        { id: 'retro_truck', name: 'Retro Truck', desc: 'Bulky heavy truck' },
+                        { id: 'police_intercept', name: 'Highway Interceptor', desc: 'Flashing sirens' }
+                      ].map(model => (
+                        <button
+                          key={model.id}
+                          onClick={() => setSelectedCarModel(model.id)}
+                          className={`p-2.5 rounded-xl text-left border font-mono transition text-xs flex flex-col justify-between gap-1 cursor-pointer ${selectedCarModel === model.id ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                        >
+                          <span className="font-bold">{model.name}</span>
+                          <span className="text-[9px] text-slate-400">{model.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Choose Racing Landscape:</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'cybercity', name: 'Cyber City', desc: 'Neon utility grids' },
+                        { id: 'tropical', name: 'Tropical Coast', desc: 'Ocean scenery' },
+                        { id: 'wasteland', name: 'Volcanic Ash', desc: 'Crimson molten fires' },
+                        { id: 'desert', name: 'Desert Canyons', desc: 'Pinnacle red rocks' }
+                      ].map(scene => (
+                        <button
+                          key={scene.id}
+                          onClick={() => setSelectedLandscape(scene.id)}
+                          className={`p-2.5 rounded-xl text-left border font-mono transition text-xs flex flex-col justify-between gap-1 cursor-pointer ${selectedLandscape === scene.id ? 'bg-purple-500/20 border-purple-400 text-purple-200 shadow-[0_0_8px_rgba(168,85,247,0.3)]' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                        >
+                          <span className="font-bold">{scene.name}</span>
+                          <span className="text-[9px] text-slate-400">{scene.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {gameId === 'zombie' && (
+                <div className="space-y-4 text-left border border-emerald-500/30 rounded-2xl p-4 bg-slate-950/90 shadow-inner z-50">
+                  <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-wider block">🔫 Select Tactical Soldier Weaponry:</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'plasma_rifle', name: 'Plasma Rifle', desc: 'Rapid stream' },
+                      { id: 'scatter_shotgun', name: 'Shotgun', desc: 'Double 5-spread' },
+                      { id: 'vortex_cannon', name: 'Vortex Cannon', desc: 'AOE splash blast' }
+                    ].map(wep => (
+                      <button
+                        key={wep.id}
+                        onClick={() => setSelectedZombieWeapon(wep.id)}
+                        className={`p-2.5 rounded-xl text-left border font-mono transition text-xs flex flex-col justify-between gap-1 cursor-pointer ${selectedZombieWeapon === wep.id ? 'bg-emerald-500/20 border-emerald-400 text-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                      >
+                        <span className="font-bold">{wep.name}</span>
+                        <span className="text-[9px] text-slate-400">{wep.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {gameId === 'space' && (
+                <div className="space-y-4 text-left border border-cyan-500/30 rounded-2xl p-4 bg-slate-950/90 shadow-inner z-50">
+                  <span className="text-[11px] font-mono text-cyan-400 font-bold uppercase tracking-wider block">🚀 Equip Starfighter Armament:</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'plasma_burst', name: 'Plasma Burst', desc: 'Dual lasers' },
+                      { id: 'neutron_wave', name: 'Neutron Wave', desc: 'Wide waves' },
+                      { id: 'singularity_charge', name: 'Fusion Blast', desc: 'Explosive orb' }
+                    ].map(wep => (
+                      <button
+                        key={wep.id}
+                        onClick={() => setSelectedSpaceWeapon(wep.id)}
+                        className={`p-2.5 rounded-xl text-left border font-mono transition text-xs flex flex-col justify-between gap-1 cursor-pointer ${selectedSpaceWeapon === wep.id ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200 shadow-[0_0_8px_rgba(6,182,212,0.3)]' : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                      >
+                        <span className="font-bold">{wep.name}</span>
+                        <span className="text-[9px] text-slate-400">{wep.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Dispatch Action Button */}
               <div className="text-center pt-2">

@@ -64,13 +64,19 @@ export class RacingGame {
   private oceanSea!: THREE.Mesh;
   private walls: THREE.Mesh[] = [];
 
+  // Configuration options
+  private carModel = 'cyber_coupe';
+  private landscapeTheme = 'tropical';
+  private sirenMaterials: THREE.MeshBasicMaterial[] = [];
+
   constructor(
     container: HTMLElement,
     canvas: HTMLCanvasElement,
     onScore: (score: number) => void,
     onHealth: (health: number) => void, // Proxied to Nitro bar
     onStatus: (status: GameStatus) => void,
-    settings: GameSettings
+    settings: GameSettings,
+    options?: { carModel?: string; landscapeTheme?: string }
   ) {
     this.container = container;
     this.canvas = canvas;
@@ -78,6 +84,11 @@ export class RacingGame {
     this.onHealth = onHealth; // Representing nitro meter
     this.onStatus = onStatus;
     this.settings = settings;
+
+    if (options) {
+      if (options.carModel) this.carModel = options.carModel;
+      if (options.landscapeTheme) this.landscapeTheme = options.landscapeTheme;
+    }
 
     this.initScene();
     this.initLights();
@@ -93,8 +104,24 @@ export class RacingGame {
     const height = this.container.clientHeight || 500;
 
     this.scene = THREE.Scene ? new THREE.Scene() : new (THREE as any).Scene();
-    this.scene.background = new THREE.Color(0x02010c);
-    this.scene.fog = new THREE.FogExp2(0x02010c, 0.007);
+
+    // Dynamically choose background and fog colors based on theme for maximum visual pop
+    let bgColor = 0x02010c; // default dark futuristic twilight
+    let fogDensity = 0.007;
+
+    if (this.landscapeTheme === 'wasteland') {
+      bgColor = 0x120305; // deep crimson volcanic ash
+      fogDensity = 0.009;
+    } else if (this.landscapeTheme === 'desert') {
+      bgColor = 0x221307; // bright dust canyon twilight
+      fogDensity = 0.008;
+    } else if (this.landscapeTheme === 'cybercity') {
+      bgColor = 0x03010b; // deep electric night city
+      fogDensity = 0.006;
+    }
+
+    this.scene.background = new THREE.Color(bgColor);
+    this.scene.fog = new THREE.FogExp2(bgColor, fogDensity);
 
     this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
     this.camera.position.set(70, 10, 20);
@@ -112,10 +139,30 @@ export class RacingGame {
   }
 
   private initLights() {
-    const amb = new THREE.AmbientLight(0x0f112e, 1.6);
+    // Brighter ambient light to boost color contrast dramatically
+    let ambColor = 0x181a44;
+    let dirColor = 0x00f2ff;
+    let ambIntensity = 2.4; 
+    let dirIntensity = 2.2;
+
+    if (this.landscapeTheme === 'wasteland') {
+      ambColor = 0x451214;
+      dirColor = 0xf97316; // molten orange primary direct light
+      ambIntensity = 2.6;
+    } else if (this.landscapeTheme === 'desert') {
+      ambColor = 0x4b2a12;
+      dirColor = 0xfbbf24; // golden desert sun
+      ambIntensity = 2.8;
+    } else if (this.landscapeTheme === 'cybercity') {
+      ambColor = 0x241445;
+      dirColor = 0xec4899; // vibrant magenta cyberlight
+      ambIntensity = 2.6;
+    }
+
+    const amb = new THREE.AmbientLight(ambColor, ambIntensity);
     this.scene.add(amb);
 
-    const dir = new THREE.DirectionalLight(0x00f2ff, 1.8);
+    const dir = new THREE.DirectionalLight(dirColor, dirIntensity);
     dir.position.set(20, 60, 40);
     this.scene.add(dir);
 
@@ -127,8 +174,15 @@ export class RacingGame {
       new THREE.Vector3(0, 4, -46),
     ];
     points.forEach((p, idx) => {
-      const col = idx % 2 === 0 ? 0xff00b7 : 0x00ffff;
-      const pl = new THREE.PointLight(col, 2.5, 75);
+      let col = idx % 2 === 0 ? 0xff00b7 : 0x00ffff;
+      if (this.landscapeTheme === 'wasteland') {
+        col = idx % 2 === 0 ? 0xff3700 : 0xffaa00;
+      } else if (this.landscapeTheme === 'desert') {
+        col = idx % 2 === 0 ? 0xeab308 : 0xf97316;
+      } else if (this.landscapeTheme === 'cybercity') {
+        col = idx % 2 === 0 ? 0xf43f5e : 0xa855f7;
+      }
+      const pl = new THREE.PointLight(col, 3.5, 85);
       pl.position.copy(p);
       this.scene.add(pl);
     });
@@ -153,14 +207,29 @@ export class RacingGame {
       outerPoints[1].push(new THREE.Vector3(ox, 0.08, oz));
     }
 
+    // Configure theme neon line colors
+    let innerLineColor = 0xff00ff;
+    let outerLineColor = 0x00ffff;
+
+    if (this.landscapeTheme === 'wasteland') {
+      innerLineColor = 0xffaa00;
+      outerLineColor = 0xff3a00;
+    } else if (this.landscapeTheme === 'desert') {
+      innerLineColor = 0xeab308;
+      outerLineColor = 0xd97706;
+    } else if (this.landscapeTheme === 'cybercity') {
+      innerLineColor = 0x22d3ee;
+      outerLineColor = 0xec4899;
+    }
+
     // Generate neon border line loops
     const innerGeom = new THREE.BufferGeometry().setFromPoints(outerPoints[0]);
-    const innerMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
+    const innerMat = new THREE.LineBasicMaterial({ color: innerLineColor });
     this.trackBorderInner = new THREE.LineLoop(innerGeom, innerMat);
     this.scene.add(this.trackBorderInner);
 
     const outerGeom = new THREE.BufferGeometry().setFromPoints(outerPoints[1]);
-    const outerMat = new THREE.LineBasicMaterial({ color: 0x00ffff });
+    const outerMat = new THREE.LineBasicMaterial({ color: outerLineColor });
     this.trackBorderOuter = new THREE.LineLoop(outerGeom, outerMat);
     this.scene.add(this.trackBorderOuter);
 
@@ -169,10 +238,20 @@ export class RacingGame {
     roadRingGeom.rotateX(-Math.PI / 2);
     roadRingGeom.scale(1.0, 1.0, this.trackRadiusZ / this.trackRadiusX);
 
+    // Brighter ashphalt base for maximum lane guidance and contrast
+    let asphaltColor = 0x090a14;
+    if (this.landscapeTheme === 'wasteland') {
+      asphaltColor = 0x16131c;
+    } else if (this.landscapeTheme === 'desert') {
+      asphaltColor = 0x1b1411;
+    } else if (this.landscapeTheme === 'cybercity') {
+      asphaltColor = 0x0b0a1d;
+    }
+
     const roadMat = new THREE.MeshStandardMaterial({
-      color: 0x090a14,
-      roughness: 0.75,
-      metalness: 0.3,
+      color: asphaltColor,
+      roughness: 0.65,
+      metalness: 0.4,
     });
     const roadMesh = new THREE.Mesh(roadRingGeom, roadMat);
     roadMesh.position.y = 0.02;
@@ -185,10 +264,21 @@ export class RacingGame {
       const rz = this.trackRadiusZ * Math.sin(theta) + (Math.random() - 0.5) * 5;
 
       const coneGeom = new THREE.ConeGeometry(0.35, 0.8, 6);
+      let coneCol = 0xfacc15;
+      let emCol = 0xd97706;
+
+      if (this.landscapeTheme === 'wasteland') {
+        coneCol = 0xff4444;
+        emCol = 0x990000;
+      } else if (this.landscapeTheme === 'cybercity') {
+        coneCol = 0xee44ff;
+        emCol = 0xbb00aa;
+      }
+
       const coneMat = new THREE.MeshStandardMaterial({
-        color: 0xfacc15,
-        emissive: 0xd97706,
-        emissiveIntensity: 0.8,
+        color: coneCol,
+        emissive: emCol,
+        emissiveIntensity: 1.0,
       });
       const cone = new THREE.Mesh(coneGeom, coneMat);
       cone.position.set(rx, 0.4, rz);
@@ -197,73 +287,284 @@ export class RacingGame {
     }
   }
 
-  // --- PROCEDURAL REAL CAR BUILDER ---
+  // --- PROCEDURAL RE-DEFINED MULTI-MODEL SPORTS CAR BUILDER ---
   private buildDetailedCar(colorHex: number, isPlayer: boolean): { group: THREE.Group, wheels: THREE.Object3D[], steers: THREE.Object3D[] } {
     const carGroup = new THREE.Group();
+    const modelStyle = isPlayer ? this.carModel : 'cyber_coupe';
 
-    // 1. Lower streamlined underchassis
-    const subChassisGeom = new THREE.BoxGeometry(1.6, 0.2, 3.4);
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8, metalness: 0.2 });
-    const subChassis = new THREE.Mesh(subChassisGeom, darkMat);
-    subChassis.position.y = 0.15;
-    carGroup.add(subChassis);
-
-    // 2. Streamlined hood/wedge fuselage body
-    const bodyGeom = new THREE.BoxGeometry(1.5, 0.4, 1.8);
-    const bodyMat = new THREE.MeshStandardMaterial({
+    const paintMat = new THREE.MeshStandardMaterial({
       color: colorHex,
-      roughness: 0.15,
-      metalness: 0.85,
+      roughness: 0.12,
+      metalness: 0.88,
     });
-    const mainBody = new THREE.Mesh(bodyGeom, bodyMat);
-    mainBody.position.set(0, 0.45, -0.3); // back-centered body
-    mainBody.castShadow = true;
-    carGroup.add(mainBody);
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.8, metalness: 0.2 });
 
-    // Sloped nose front hood
-    const noseGeom = new THREE.BoxGeometry(1.48, 0.25, 1.2);
-    const nose = new THREE.Mesh(noseGeom, bodyMat);
-    nose.position.set(0, 0.35, 1.1); // extended forward
-    nose.rotation.x = -Math.PI / 16; // sloped down nose
-    carGroup.add(nose);
+    const wheelsList: THREE.Object3D[] = [];
+    const steerWheelsList: THREE.Object3D[] = [];
 
-    // 3. Cabin cockpit canopy with glass windows
-    const cabGeom = new THREE.BoxGeometry(0.9, 0.4, 1.0);
-    const glassMat = new THREE.MeshStandardMaterial({
-      color: isPlayer ? 0x06b6d4 : 0x0f172a,
-      roughness: 0.05,
-      metalness: 0.95,
-      transparent: true,
-      opacity: 0.7,
-    });
-    const cockpit = new THREE.Mesh(cabGeom, glassMat);
-    cockpit.position.set(0, 0.75, -0.2);
-    carGroup.add(cockpit);
+    // Base tire geometry and material definitions
+    let tireRadius = 0.42;
+    let tireWidth = 0.45;
+    let wheelOffsetZ = 1.1;
+    let wheelOffsetX = 0.95;
 
-    // Windshield
-    const windshieldGeom = new THREE.BoxGeometry(0.85, 0.35, 0.1);
-    const windshield = new THREE.Mesh(windshieldGeom, glassMat);
-    windshield.position.set(0, 0.7, 0.35);
-    windshield.rotation.x = -Math.PI / 6;
-    carGroup.add(windshield);
+    if (modelStyle === 'retro_truck') {
+      tireRadius = 0.56;
+      tireWidth = 0.52;
+      wheelOffsetZ = 1.15;
+      wheelOffsetX = 1.0;
+    }
 
-    // 4. Aerodynamic Rear wing spoiler
-    const wingSupportL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.1), darkMat);
-    wingSupportL.position.set(-0.6, 0.65, -1.3);
-    carGroup.add(wingSupportL);
+    const wheelTireGeom = new THREE.CylinderGeometry(tireRadius, tireRadius, tireWidth, 12);
+    wheelTireGeom.rotateZ(Math.PI / 2); // align wheel axial spin
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x18181e, roughness: 0.95 });
 
-    const wingSupportR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.1), darkMat);
-    wingSupportR.position.set(0.6, 0.65, -1.3);
-    carGroup.add(wingSupportR);
+    if (modelStyle === 'neon_f1') {
+      // ==========================================
+      // OPTION 1: NEON FORMULA 1 HYPER RACER
+      // ==========================================
+      
+      // Central needle body monocoque
+      const monocoqueGeom = new THREE.BoxGeometry(0.75, 0.36, 3.5);
+      const f1Body = new THREE.Mesh(monocoqueGeom, paintMat);
+      f1Body.position.y = 0.3;
+      carGroup.add(f1Body);
 
-    // Big neon spoiler wing blade
-    const bladeGeom = new THREE.BoxGeometry(1.9, 0.08, 0.5);
-    const neonMat = new THREE.MeshStandardMaterial({ color: isPlayer ? 0xff00aa : 0x00ffff, emissive: isPlayer ? 0xff00a0 : 0x00ffff, emissiveIntensity: 1.0 });
-    const spoilerBlade = new THREE.Mesh(bladeGeom, neonMat);
-    spoilerBlade.position.set(0, 0.9, -1.3);
-    carGroup.add(spoilerBlade);
+      // Pointy front nose-cone
+      const noseConeGeom = new THREE.ConeGeometry(0.35, 1.2, 5);
+      noseConeGeom.rotateX(Math.PI / 2);
+      const noseCone = new THREE.Mesh(noseConeGeom, paintMat);
+      noseCone.position.set(0, 0.22, 1.8);
+      noseCone.scale.set(1.0, 0.5, 1.0);
+      carGroup.add(noseCone);
 
-    // 5. Dual Exhaust Mufflers
+      // Driver Cockpit Pod with halo
+      const cockpitHelmetGeom = new THREE.SphereGeometry(0.24, 8, 8);
+      const helmetMat = new THREE.MeshBasicMaterial({ color: 0xffea00 });
+      const helmet = new THREE.Mesh(cockpitHelmetGeom, helmetMat);
+      helmet.position.set(0, 0.58, -0.1);
+      carGroup.add(helmet);
+
+      const haloGeom = new THREE.TorusGeometry(0.32, 0.08, 6, 12);
+      haloGeom.rotateX(Math.PI / 2);
+      const halo = new THREE.Mesh(haloGeom, darkMat);
+      halo.position.set(0, 0.48, 0.1);
+      carGroup.add(halo);
+
+      // Huge formula forward wings
+      const fWingGeom = new THREE.BoxGeometry(1.9, 0.06, 0.45);
+      const fWing = new THREE.Mesh(fWingGeom, paintMat);
+      fWing.position.set(0, 0.16, 2.1);
+      carGroup.add(fWing);
+
+      // Massive F1 Double-Wing Rear Spoiler
+      const rearPoleL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.8, 0.08), darkMat);
+      rearPoleL.position.set(-0.35, 0.65, -1.4);
+      carGroup.add(rearPoleL);
+
+      const rearPoleR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.8, 0.08), darkMat);
+      rearPoleR.position.set(0.35, 0.65, -1.4);
+      carGroup.add(rearPoleR);
+
+      const f1BladeGeom = new THREE.BoxGeometry(1.8, 0.08, 0.65);
+      const f1BladeMat = new THREE.MeshStandardMaterial({ 
+        color: isPlayer ? 0xffea00 : colorHex, 
+        emissive: isPlayer ? 0xffea00 : colorHex, 
+        emissiveIntensity: 1.2 
+      });
+      const f1Spoiler = new THREE.Mesh(f1BladeGeom, f1BladeMat);
+      f1Spoiler.position.set(0, 1.05, -1.4);
+      carGroup.add(f1Spoiler);
+
+      // Side Pods intakes
+      const podGeom = new THREE.BoxGeometry(0.38, 0.38, 1.25);
+      
+      const podL = new THREE.Mesh(podGeom, paintMat);
+      podL.position.set(-0.55, 0.3, 0.15);
+      carGroup.add(podL);
+
+      const podR = new THREE.Mesh(podGeom, paintMat);
+      podR.position.set(0.55, 0.3, 0.15);
+      carGroup.add(podR);
+
+    } else if (modelStyle === 'retro_truck') {
+      // ==========================================
+      // OPTION 2: RUGGED CYBER RETRO TRUCK
+      // ==========================================
+
+      // Tall armored blocky chassis
+      const truckTruckGeom = new THREE.BoxGeometry(1.65, 0.55, 3.45);
+      const truckChassis = new THREE.Mesh(truckTruckGeom, paintMat);
+      truckChassis.position.y = 0.55;
+      truckChassis.castShadow = true;
+      carGroup.add(truckChassis);
+
+      // Elevated Crew boxy cabin
+      const cabGeom = new THREE.BoxGeometry(1.48, 0.68, 1.6);
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x0ea5e9,
+        roughness: 0.05,
+        metalness: 0.9,
+        transparent: true,
+        opacity: 0.7,
+      });
+      const cabinObj = new THREE.Mesh(cabGeom, paintMat);
+      cabinObj.position.set(0, 1.12, 0.05);
+      carGroup.add(cabinObj);
+
+      const winGeom = new THREE.BoxGeometry(1.36, 0.42, 1.35);
+      const winObj = new THREE.Mesh(winGeom, glassMat);
+      winObj.position.set(0, 1.2, 0.1);
+      carGroup.add(winObj);
+
+      // Open back truck bed
+      const bedWallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.9), paintMat);
+      bedWallLeft.position.set(-0.76, 1.0, -1.1);
+      carGroup.add(bedWallLeft);
+
+      const bedWallRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.9), paintMat);
+      bedWallRight.position.set(0.76, 1.0, -1.1);
+      carGroup.add(bedWallRight);
+
+      // Roof Mounted LED Light bar rack
+      const rackMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
+      const lightRack = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 0.15), rackMat);
+      lightRack.position.set(0, 1.5, 0.45);
+      carGroup.add(lightRack);
+
+    } else if (modelStyle === 'police_intercept') {
+      // ==========================================
+      // OPTION 3: FUTURISTIC HIGH-PURSUIT INTERCEPTOR
+      // ==========================================
+
+      // Heavy muscular base
+      const interceptorBase = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 3.4), paintMat);
+      interceptorBase.position.y = 0.25;
+      carGroup.add(interceptorBase);
+
+      // Aggressive front steel push guards (black rails)
+      const pushBar = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.64, 0.18), darkMat);
+      pushBar.position.set(0, 0.45, 1.76);
+      carGroup.add(pushBar);
+
+      // Canopy
+      const canopyGeom = new THREE.BoxGeometry(1.2, 0.48, 1.75);
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x111822,
+        roughness: 0.1,
+        metalness: 0.9,
+      });
+      const canopyObj = new THREE.Mesh(canopyGeom, glassMat);
+      canopyObj.position.set(0, 0.68, -0.15);
+      carGroup.add(canopyObj);
+
+      // Police Decals on doors
+      const decalL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 1.15), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      decalL.position.set(-0.81, 0.35, -0.1);
+      carGroup.add(decalL);
+
+      const decalR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 1.15), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      decalR.position.set(0.81, 0.35, -0.1);
+      carGroup.add(decalR);
+
+      // Siren base
+      const sirenBase = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.22), darkMat);
+      sirenBase.position.set(0, 0.95, -0.2);
+      carGroup.add(sirenBase);
+
+      // Red and blue flashing emergency sirens
+      const redSirenMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const blueSirenMat = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+
+      const sirenL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.16), redSirenMat);
+      sirenL.position.set(-0.2, 1.02, -0.2);
+      carGroup.add(sirenL);
+
+      const sirenR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.16), blueSirenMat);
+      sirenR.position.set(0.2, 1.02, -0.2);
+      carGroup.add(sirenR);
+
+      // Save materials so we can flash them during tick cycles
+      this.sirenMaterials.push(redSirenMat, blueSirenMat);
+
+    } else {
+      // ==========================================
+      // STANDARD OPTION: CYBER COUPE (GLOW MODDED)
+      // ==========================================
+      const subChassisGeom = new THREE.BoxGeometry(1.6, 0.2, 3.4);
+      const subChassis = new THREE.Mesh(subChassisGeom, darkMat);
+      subChassis.position.y = 0.15;
+      carGroup.add(subChassis);
+
+      const bodyGeom = new THREE.BoxGeometry(1.5, 0.4, 1.8);
+      const mainBody = new THREE.Mesh(bodyGeom, paintMat);
+      mainBody.position.set(0, 0.45, -0.3); // back-centered body
+      mainBody.castShadow = true;
+      carGroup.add(mainBody);
+
+      // Sloped nose front hood
+      const noseGeom = new THREE.BoxGeometry(1.48, 0.25, 1.2);
+      const nose = new THREE.Mesh(noseGeom, paintMat);
+      nose.position.set(0, 0.35, 1.1); // extended forward
+      nose.rotation.x = -Math.PI / 16;
+      carGroup.add(nose);
+
+      // Cabin cockpit canopy with glass windows
+      const cabGeom = new THREE.BoxGeometry(0.9, 0.4, 1.0);
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: isPlayer ? 0x22d3ee : 0x0f172a,
+        roughness: 0.05,
+        metalness: 0.95,
+        transparent: true,
+        opacity: 0.7,
+      });
+      const cockpit = new THREE.Mesh(cabGeom, glassMat);
+      cockpit.position.set(0, 0.75, -0.2);
+      carGroup.add(cockpit);
+
+      // Windshield
+      const windshieldGeom = new THREE.BoxGeometry(0.85, 0.35, 0.1);
+      const windshield = new THREE.Mesh(windshieldGeom, glassMat);
+      windshield.position.set(0, 0.7, 0.35);
+      windshield.rotation.x = -Math.PI / 6;
+      carGroup.add(windshield);
+
+      // Aerodynamic Rear wing spoiler
+      const wingSupportL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.1), darkMat);
+      wingSupportL.position.set(-0.6, 0.65, -1.3);
+      carGroup.add(wingSupportL);
+
+      const wingSupportR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.1), darkMat);
+      wingSupportR.position.set(0.6, 0.65, -1.3);
+      carGroup.add(wingSupportR);
+
+      // Big neon spoiler wing blade
+      const spoilerBladeGeom = new THREE.BoxGeometry(1.9, 0.08, 0.5);
+      const neonMat = new THREE.MeshStandardMaterial({ 
+        color: isPlayer ? 0xff00aa : 0x00ffff, 
+        emissive: isPlayer ? 0xff00a0 : 0x00ffff, 
+        emissiveIntensity: 1.2 
+      });
+      const spoilerBlade = new THREE.Mesh(spoilerBladeGeom, neonMat);
+      spoilerBlade.position.set(0, 0.9, -1.3);
+      carGroup.add(spoilerBlade);
+
+      // Modded neon glow lines underneath fenders (underglow cyan/purple)
+      const underglowMat = new THREE.MeshBasicMaterial({ color: isPlayer ? 0x22d3ee : 0xff00aa });
+      const bulbL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 2.0), underglowMat);
+      bulbL.position.set(-0.75, 0.08, 0);
+      carGroup.add(bulbL);
+
+      const bulbR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 2.0), underglowMat);
+      bulbR.position.set(0.75, 0.08, 0);
+      carGroup.add(bulbR);
+    }
+
+    // ==========================================
+    // DECORATIVE ENGINE PORT EXHAUSTS AND HEADLIGHTS
+    // ==========================================
+    
+    // Dual Exhaust Mufflers at the rear
     const exhaustGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.5, 8);
     exhaustGeom.rotateX(Math.PI / 2);
     const exhaustMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.9, roughness: 0.1 });
@@ -276,7 +577,7 @@ export class RacingGame {
     exhaustR.position.set(0.35, 0.15, -1.75);
     carGroup.add(exhaustR);
 
-    // 6. Glowing white headlights
+    // Glowing white headlights
     const lightGeom = new THREE.BoxGeometry(0.25, 0.1, 0.1);
     const highlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const headlightL = new THREE.Mesh(lightGeom, highlightMat);
@@ -287,24 +588,20 @@ export class RacingGame {
     headlightR.position.set(0.55, 0.35, 1.72);
     carGroup.add(headlightR);
 
-    // Rear glowing red taillights
+    // Rear glowing red taillights base
     const redLightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     const taillight = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.1), redLightMat);
     taillight.position.set(0, 0.45, -1.25);
     carGroup.add(taillight);
 
-    // 7. Cylindrical tires placement (4 wheels)
-    const wheelsList: THREE.Object3D[] = [];
-    const steerWheelsList: THREE.Object3D[] = [];
-
-    const wheelTireGeom = new THREE.CylinderGeometry(0.42, 0.42, 0.45, 10);
-    wheelTireGeom.rotateZ(Math.PI / 2); // align wheel axial spin
-    const tireMat = new THREE.MeshStandardMaterial({ color: 0x111118, roughness: 0.9 });
+    // ==========================================
+    // TIRES / WHEELS PLACEMENT
+    // ==========================================
     
-    // Front steerable wheels are placed inside pivot groups
+    // Front steerable pivot mounts
     const makeFrontSteeringWheel = (xOffset: number, zOffset: number) => {
       const steerPivot = new THREE.Group();
-      steerPivot.position.set(xOffset, 0.35, zOffset);
+      steerPivot.position.set(xOffset, tireRadius * 0.85, zOffset);
       
       const wheelMesh = new THREE.Mesh(wheelTireGeom, tireMat);
       wheelMesh.castShadow = true;
@@ -315,26 +612,36 @@ export class RacingGame {
       steerWheelsList.push(steerPivot);
     };
 
-    makeFrontSteeringWheel(-0.95, 1.1);  // FL
-    makeFrontSteeringWheel(0.95, 1.1);   // FR
+    makeFrontSteeringWheel(-wheelOffsetX, wheelOffsetZ);  // FL
+    makeFrontSteeringWheel(wheelOffsetX, wheelOffsetZ);   // FR
 
-    // Rear stationary wheels
-    const makeRearStationaryWheel = (xOffset: number, rOffset: number) => {
+    // Rear stationary mounts
+    const makeRearStationaryWheel = (xOffset: number, zOffset: number) => {
       const wheelMesh = new THREE.Mesh(wheelTireGeom, tireMat);
-      wheelMesh.position.set(xOffset, 0.35, rOffset);
+      wheelMesh.position.set(xOffset, tireRadius * 0.85, zOffset);
       wheelMesh.castShadow = true;
       carGroup.add(wheelMesh);
       wheelsList.push(wheelMesh);
     };
 
-    makeRearStationaryWheel(-0.95, -1.1); // RL
-    makeRearStationaryWheel(0.95, -1.1);  // RR
+    makeRearStationaryWheel(-wheelOffsetX, -wheelOffsetZ); // RL
+    makeRearStationaryWheel(wheelOffsetX, -wheelOffsetZ);  // RR
 
     return { group: carGroup, wheels: wheelsList, steers: steerWheelsList };
   }
 
   private initPlayer() {
-    const carDetails = this.buildDetailedCar(0x06b6d4, true); // Player Cyan Sports Car
+    // Player color choice based on customization or default vibrant cyan
+    let carColor = 0x06b6d4;
+    if (this.carModel === 'retro_truck') {
+      carColor = 0xf59e0b; // rugged gold pickup
+    } else if (this.carModel === 'police_intercept') {
+      carColor = 0x1e293b; // dark interceptor armored plating
+    } else if (this.carModel === 'neon_f1') {
+      carColor = 0x10b981; // green racing monocoque F1
+    }
+
+    const carDetails = this.buildDetailedCar(carColor, true);
     this.playerMesh = carDetails.group;
     this.playerWheels = carDetails.wheels;
     this.playerSteerWheels = carDetails.steers;
@@ -372,23 +679,56 @@ export class RacingGame {
   }
 
   private initLandscape() {
-    // --- VAST AMBIENT COASTAL OCEAN SEA PLANE ---
-    // Make racetrack sit on a cool island surrounded by water!
-    const oceanGeom = new THREE.PlaneGeometry(1200, 1000, 24, 24);
+    // --- VAST AMBIENT COASTAL OCEAN OR FLUID LAVA PLANE ---
+    //坐落在熔岩海、干沙或大都市底层的赛道
+    const oceanGeom = new THREE.PlaneGeometry(1200, 1000, 16, 16);
+    
+    let oceanColor = 0x051d38; 
+    let roughnessVal = 0.1;
+    let emissiveColor = 0x000000;
+    let emissiveIntensityVal = 0.0;
+
+    if (this.landscapeTheme === 'wasteland') {
+      oceanColor = 0xea580c; // boiling orange volcanic lava flow
+      roughnessVal = 0.6;
+      emissiveColor = 0xef4444; // glowing crimson heat
+      emissiveIntensityVal = 1.3;
+    } else if (this.landscapeTheme === 'desert') {
+      oceanColor = 0xa16207; // dry dust clay lake-bed
+      roughnessVal = 0.95;
+    } else if (this.landscapeTheme === 'cybercity') {
+      oceanColor = 0x0d0628;  // glowing cybernetic synth-grid ocean
+      roughnessVal = 0.2;
+      emissiveColor = 0x1e003c;
+      emissiveIntensityVal = 0.4;
+    }
+
     const oceanMat = new THREE.MeshStandardMaterial({
-      color: 0x051d38,
-      roughness: 0.1,
-      metalness: 0.9,
+      color: oceanColor,
+      roughness: roughnessVal,
+      metalness: 0.8,
+      emissive: emissiveColor,
+      emissiveIntensity: emissiveIntensityVal
     });
     this.oceanSea = new THREE.Mesh(oceanGeom, oceanMat);
     this.oceanSea.rotation.x = -Math.PI / 2;
-    this.oceanSea.position.y = -0.2; // sea level is below racetrack concrete
+    this.oceanSea.position.y = -0.2; // sitting below racetrack concrete
     this.scene.add(this.oceanSea);
 
-    // Sandy Shore Island terrain bed
+    // Central core Island terrain bed
     const islandGeom = new THREE.PlaneGeometry(280, 180);
+    
+    let islandColor = 0x070c14; // Default sand dunes dark beach
+    if (this.landscapeTheme === 'wasteland') {
+      islandColor = 0x090506; // dark burnt obsidian soil
+    } else if (this.landscapeTheme === 'desert') {
+      islandColor = 0xd97706; // sandy orange desert core
+    } else if (this.landscapeTheme === 'cybercity') {
+      islandColor = 0x080617; // grid plate base
+    }
+
     const islandMat = new THREE.MeshStandardMaterial({
-      color: 0x070c14,
+      color: islandColor,
       roughness: 0.9,
     });
     const island = new THREE.Mesh(islandGeom, islandMat);
@@ -408,7 +748,16 @@ export class RacingGame {
 
     // Neon grandstand columns/canopy roof
     const roofGeom = new THREE.BoxGeometry(42, 0.4, 7.0);
-    const neonRoofMat = new THREE.MeshStandardMaterial({ color: 0x111827, emissive: 0xff00aa, emissiveIntensity: 0.4 });
+    let neonColor = 0xff00aa;
+    if (this.landscapeTheme === 'wasteland') {
+      neonColor = 0xffea00;
+    } else if (this.landscapeTheme === 'desert') {
+      neonColor = 0xf97316;
+    } else if (this.landscapeTheme === 'cybercity') {
+      neonColor = 0x22d3ee;
+    }
+
+    const neonRoofMat = new THREE.MeshStandardMaterial({ color: 0x111827, emissive: neonColor, emissiveIntensity: 0.6 });
     const roof = new THREE.Mesh(roofGeom, neonRoofMat);
     roof.position.set(0, 7.0, 0);
     standGroup.add(roof);
@@ -431,43 +780,121 @@ export class RacingGame {
     standObstacle.position.set(0, 3, -58);
     this.walls.push(standObstacle);
 
-    // --- SCENIC SHORELINE TROPICAL TREES ---
-    const spawnPalmTree = (x: number, z: number) => {
-      const tree = new THREE.Group();
-      tree.position.set(x, 0, z);
+    // --- SCENIC SHORELINE NATURAL OBSTACLES OR NEON COLUMNS ---
+    const spawnLandscapeMeshObject = (x: number, z: number) => {
+      if (this.landscapeTheme === 'wasteland') {
+        // ==========================================
+        // VOLCANIC LAVA SPIRE
+        // ==========================================
+        const spireGroup = new THREE.Group();
+        spireGroup.position.set(x, 0, z);
 
-      // Slanted high trunk cylinder
-      const trunkGeom = new THREE.CylinderGeometry(0.15, 0.24, 5.0, 5);
-      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.9 });
-      const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-      trunk.position.y = 2.5;
-      trunk.rotation.z = (Math.random() - 0.5) * 0.25; // slant
-      tree.add(trunk);
+        const coreGeom = new THREE.ConeGeometry(1.5, 6.5, 4);
+        const coreMat = new THREE.MeshStandardMaterial({ color: 0x090506, roughness: 0.9 });
+        const core = new THREE.Mesh(coreGeom, coreMat);
+        core.position.y = 3.25;
+        spireGroup.add(core);
 
-      // Palm leaf foliage clusters (using small overlapping spheres)
-      const leafMat = new THREE.MeshStandardMaterial({ color: 0x047857, roughness: 0.6 });
-      for (let j = 0; j < 5; j++) {
-        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.65, 6, 6), leafMat);
-        const angle = (j / 5) * Math.PI * 2;
-        leaf.position.set(Math.cos(angle) * 1.1, 4.8, Math.sin(angle) * 1.1);
-        tree.add(leaf);
+        // Blazing magma highlight bands
+        const bandGeom = new THREE.TorusGeometry(0.8, 0.14, 4, 8);
+        bandGeom.rotateX(Math.PI / 2);
+        const bandMat = new THREE.MeshBasicMaterial({ color: 0xff3b00 });
+        const band = new THREE.Mesh(bandGeom, bandMat);
+        band.position.y = 2.0;
+        spireGroup.add(band);
+
+        this.scene.add(spireGroup);
+
+        const barrierBox = new THREE.Mesh(new THREE.BoxGeometry(1.6, 5, 1.6), coreMat);
+        barrierBox.position.set(x, 2.5, z);
+        this.walls.push(barrierBox);
+
+      } else if (this.landscapeTheme === 'desert') {
+        // ==========================================
+        // DESERT CANYON ROCK PILLARS
+        // ==========================================
+        const rockHeight = 7 + Math.random() * 8;
+        const canyonGroup = new THREE.Group();
+        canyonGroup.position.set(x, 0, z);
+
+        const canyonRockGeom = new THREE.CylinderGeometry(1.4, 2.0, rockHeight, 5);
+        const canyonRockMat = new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.95 });
+        const core = new THREE.Mesh(canyonRockGeom, canyonRockMat);
+        core.position.y = rockHeight / 2;
+        canyonGroup.add(core);
+
+        this.scene.add(canyonGroup);
+
+        const barrierBox = new THREE.Mesh(new THREE.BoxGeometry(2.2, rockHeight, 2.2), canyonRockMat);
+        barrierBox.position.set(x, rockHeight / 2, z);
+        this.walls.push(barrierBox);
+
+      } else if (this.landscapeTheme === 'cybercity') {
+        // ==========================================
+        // FUTURE CITY NEON UTILITY POLE
+        // ==========================================
+        const poleGroup = new THREE.Group();
+        poleGroup.position.set(x, 0, z);
+
+        const pillarCore = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 6.5, 6), pillarMat);
+        pillarCore.position.y = 3.25;
+        poleGroup.add(pillarCore);
+
+        // Rotating horizontal cyber ring
+        const ringGeom = new THREE.TorusGeometry(1.4, 0.08, 4, 6);
+        ringGeom.rotateX(Math.PI / 2);
+        const ringMat = new THREE.MeshStandardMaterial({ 
+          color: 0x22d3ee, 
+          emissive: 0x22d3ee, 
+          emissiveIntensity: 1.0 
+        });
+        const meshRing = new THREE.Mesh(ringGeom, ringMat);
+        meshRing.position.y = 4.5;
+        poleGroup.add(meshRing);
+
+        this.scene.add(poleGroup);
+
+        const barrierBox = new THREE.Mesh(new THREE.BoxGeometry(0.8, 6.5, 0.8), pillarMat);
+        barrierBox.position.set(x, 3.25, z);
+        this.walls.push(barrierBox);
+
+      } else {
+        // ==========================================
+        // DEFAULT TROPICAL PALM TREE
+        // ==========================================
+        const tree = new THREE.Group();
+        tree.position.set(x, 0, z);
+
+        const trunkGeom = new THREE.CylinderGeometry(0.15, 0.24, 5.0, 5);
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.9 });
+        const trunk = new THREE.Mesh(trunkGeom, trunkMat);
+        trunk.position.y = 2.5;
+        trunk.rotation.z = (Math.random() - 0.5) * 0.25; // slant
+        tree.add(trunk);
+
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x047857, roughness: 0.6 });
+        for (let j = 0; j < 5; j++) {
+          const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.65, 6, 6), leafMat);
+          const angle = (j / 5) * Math.PI * 2;
+          leaf.position.set(Math.cos(angle) * 1.1, 4.8, Math.sin(angle) * 1.1);
+          tree.add(leaf);
+        }
+
+        this.scene.add(tree);
+
+        const peg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4, 0.8), trunkMat);
+        peg.position.set(x, 2, z);
+        this.walls.push(peg);
       }
-
-      this.scene.add(tree);
-
-      // Simple collision peg for palm tree
-      const peg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4, 0.8), trunkMat);
-      peg.position.set(x, 2, z);
-      this.walls.push(peg);
     };
 
-    // Plant seaside palm trees around the borders
-    spawnPalmTree(40, -15);
-    spawnPalmTree(-40, 15);
-    spawnPalmTree(50, 48);
-    spawnPalmTree(-50, -48);
-    spawnPalmTree(0, 18);
-    spawnPalmTree(12, -22);
+    // Plant roadside elements around the borders
+    spawnLandscapeMeshObject(40, -15);
+    spawnLandscapeMeshObject(-40, 15);
+    spawnLandscapeMeshObject(50, 48);
+    spawnLandscapeMeshObject(-50, -48);
+    spawnLandscapeMeshObject(0, 18);
+    spawnLandscapeMeshObject(12, -22);
 
     // --- BACKGROUND METROPOLIS NEON SKYLINE ---
     const spawnSkyscraperNode = (x: number, z: number, rSize: number, h: number, colGlow: number) => {
@@ -495,11 +922,28 @@ export class RacingGame {
       this.scene.add(towerParent);
     };
 
-    // Add futuristic background city towers in distances
-    spawnSkyscraperNode(-110, -50, 18, 55, 0xec4899);
-    spawnSkyscraperNode(-120, 20, 15, 45, 0x06b6d4);
-    spawnSkyscraperNode(110, -75, 20, 60, 0x8b5cf6);
-    spawnSkyscraperNode(130, -10, 16, 50, 0x10b981);
+    // Add futuristic background city towers in distances based on colors
+    let towerColor1 = 0xec4899;
+    let towerColor2 = 0x06b6d4;
+    let towerColor3 = 0x8b5cf6;
+    let towerColor4 = 0x10b981;
+
+    if (this.landscapeTheme === 'wasteland') {
+      towerColor1 = 0xffa500;
+      towerColor2 = 0xff3700;
+      towerColor3 = 0x990000;
+      towerColor4 = 0xffea00;
+    } else if (this.landscapeTheme === 'desert') {
+      towerColor1 = 0xd97706;
+      towerColor2 = 0xeab308;
+      towerColor3 = 0xf97316;
+      towerColor4 = 0xca8a04;
+    }
+
+    spawnSkyscraperNode(-110, -50, 18, 55, towerColor1);
+    spawnSkyscraperNode(-120, 20, 15, 45, towerColor2);
+    spawnSkyscraperNode(110, -75, 20, 60, towerColor3);
+    spawnSkyscraperNode(130, -10, 16, 50, towerColor4);
   }
 
   public accelerate() {
@@ -563,6 +1007,13 @@ export class RacingGame {
     if (this.status !== 'PLAYING') return;
 
     this.timeElapsed += delta;
+
+    // Siren lights flashing interpolation for police interceptor
+    if (this.sirenMaterials.length >= 2) {
+      const flash = Math.floor(this.timeElapsed * 11) % 2 === 0;
+      this.sirenMaterials[0].color.setHex(flash ? 0xff0000 : 0x220000); // flashing red
+      this.sirenMaterials[1].color.setHex(flash ? 0x000022 : 0x0000ff); // flashing blue
+    }
 
     // Simulate animated wavy Sea waves using vertex transformations approximations (mesh changes context)
     if (this.oceanSea) {

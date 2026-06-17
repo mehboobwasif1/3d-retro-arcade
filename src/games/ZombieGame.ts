@@ -21,6 +21,8 @@ interface Bullet {
   mesh: THREE.Mesh;
   velocity: THREE.Vector3;
   lifespan: number; // time left to live in ms
+  isVortex?: boolean;
+  damage?: number;
 }
 
 export class ZombieGame {
@@ -35,6 +37,9 @@ export class ZombieGame {
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
   private animationFrameId: number | null = null;
+
+  // Custom Options Configuration
+  private weaponType = 'plasma_rifle';
 
   // Game states
   private score = 0;
@@ -79,7 +84,8 @@ export class ZombieGame {
     onScore: (score: number) => void,
     onHealth: (health: number) => void,
     onStatus: (status: GameStatus) => void,
-    settings: GameSettings
+    settings: GameSettings,
+    options?: { weaponType?: string }
   ) {
     this.container = container;
     this.canvas = canvas;
@@ -87,6 +93,20 @@ export class ZombieGame {
     this.onHealth = onHealth;
     this.onStatus = onStatus;
     this.settings = settings;
+
+    if (options && options.weaponType) {
+      this.weaponType = options.weaponType;
+    }
+
+    // Configure magazine/stats based on selected weapon system
+    if (this.weaponType === 'plasma_rifle') {
+      this.maxAmmo = 45;
+    } else if (this.weaponType === 'scatter_shotgun') {
+      this.maxAmmo = 8;
+    } else if (this.weaponType === 'vortex_cannon') {
+      this.maxAmmo = 15;
+    }
+    this.currentAmmo = this.maxAmmo;
 
     this.initScene();
     this.initLights();
@@ -101,9 +121,9 @@ export class ZombieGame {
     const height = this.container.clientHeight || 500;
 
     this.scene = THREE.Scene ? new THREE.Scene() : new (THREE as any).Scene();
-    // Spooky horror city dark green-fog style
-    this.scene.background = new THREE.Color(0x020805);
-    this.scene.fog = new THREE.FogExp2(0x020805, 0.02);
+    // Brighter steel-blue midnight theme instead of pitch black, yielding perfect visual depth
+    this.scene.background = new THREE.Color(0x0a0e1a);
+    this.scene.fog = new THREE.FogExp2(0x0a0e1a, 0.016);
 
     this.camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
     // Overhead isometric shooter perspective
@@ -123,10 +143,12 @@ export class ZombieGame {
   }
 
   private initLights() {
-    const SpookyAmbient = new THREE.AmbientLight(0x0a1f14, 1.4);
+    // Highly brightened ambient light for strong overall visibility
+    const SpookyAmbient = new THREE.AmbientLight(0x22324f, 2.5);
     this.scene.add(SpookyAmbient);
 
-    const greenFlash = new THREE.DirectionalLight(0x059669, 1.8);
+    // Brilliant, high contrast cyan directional moon beam casting soft guidance on field
+    const greenFlash = new THREE.DirectionalLight(0x0ea5e9, 2.6);
     greenFlash.position.set(-10, 30, 20);
     this.scene.add(greenFlash);
 
@@ -540,53 +562,101 @@ export class ZombieGame {
     headGroup.add(visor);
     this.playerMesh.add(headGroup);
 
-    // --- DETAILED RIFLE WEAPON held forward ---
+    // --- DETAILED CUSTOM WEAPON HELD FORWARD ---
     this.gunMesh = new THREE.Group();
     this.gunMesh.position.set(0.38, 1.25, 0.55);
 
-    // Gun main stock/body
-    const gunStock = new THREE.Mesh(
-      new THREE.BoxGeometry(0.16, 0.28, 0.85),
-      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 })
-    );
-    this.gunMesh.add(gunStock);
+    if (this.weaponType === 'plasma_rifle') {
+      // 1. NEON PLASMA RIFLE
+      const gunStock = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.28, 0.85),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 })
+      );
+      this.gunMesh.add(gunStock);
 
-    // Steel Gun barrel extending long
-    const gunBarrelGeom = new THREE.CylinderGeometry(0.06, 0.06, 1.1, 6);
-    gunBarrelGeom.rotateX(Math.PI / 2);
-    const barrel = new THREE.Mesh(
-      gunBarrelGeom,
-      new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.9 })
-    );
-    barrel.position.set(0, 0.04, 0.85); // long forward barrel
-    this.gunMesh.add(barrel);
+      const barrelGeom = new THREE.CylinderGeometry(0.06, 0.06, 1.1, 6);
+      barrelGeom.rotateX(Math.PI / 2);
+      const barrel = new THREE.Mesh(
+        barrelGeom,
+        new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.9 })
+      );
+      barrel.position.set(0, 0.04, 0.85);
+      this.gunMesh.add(barrel);
 
-    // Angled Ammo magazine block
-    const clipGeom = new THREE.BoxGeometry(0.1, 0.45, 0.2);
-    const clip = new THREE.Mesh(clipGeom, new THREE.MeshStandardMaterial({ color: 0x1e293b }));
-    clip.position.set(0, -0.3, 0.15);
-    clip.rotation.x = -Math.PI / 10;
-    this.gunMesh.add(clip);
+      // Cyan scope
+      const scopeGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.45, 6);
+      scopeGeom.rotateX(Math.PI / 2);
+      const scope = new THREE.Mesh(scopeGeom, new THREE.MeshStandardMaterial({ color: 0x0ea5e9 }));
+      scope.position.set(0, 0.21, 0.0);
+      this.gunMesh.add(scope);
 
-    // Optical sniping Laser scope on top
-    const scopeGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.45, 6);
-    scopeGeom.rotateX(Math.PI / 2);
-    const scope = new THREE.Mesh(scopeGeom, new THREE.MeshStandardMaterial({ color: 0x0f172a }));
-    scope.position.set(0, 0.21, 0.0);
-    this.gunMesh.add(scope);
+      const lensGeom = new THREE.SphereGeometry(0.06, 6, 6);
+      const lens = new THREE.Mesh(lensGeom, new THREE.MeshBasicMaterial({ color: 0x22d3ee }));
+      lens.position.set(0, 0, 0.24);
+      scope.add(lens);
 
-    // Lens glow sphere at tip
-    const lensGeom = new THREE.SphereGeometry(0.06, 6, 6);
-    const lensMat = new THREE.MeshBasicMaterial({ color: 0xff4f3b });
-    const lens = new THREE.Mesh(lensGeom, lensMat);
-    lens.position.set(0, 0, 0.24);
-    scope.add(lens);
+      const clip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.45, 0.2), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+      clip.position.set(0, -0.3, 0.15);
+      clip.rotation.x = -Math.PI / 10;
+      this.gunMesh.add(clip);
+    } else if (this.weaponType === 'scatter_shotgun') {
+      // 2. RETRO DUAL-BARREL SHOTGUN
+      const gunStock = new THREE.Mesh(
+        new THREE.BoxGeometry(0.24, 0.32, 0.95),
+        new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.9 }) // classic wooden stock
+      );
+      this.gunMesh.add(gunStock);
 
-    // Laser sight guide path
-    const sightGeom = new THREE.SphereGeometry(0.05, 5, 5);
-    const sight = new THREE.Mesh(sightGeom, lensMat);
-    sight.position.set(0, 0, 0.55);
-    barrel.add(sight);
+      // Two barrels parallel
+      const barrelGeom = new THREE.CylinderGeometry(0.05, 0.05, 1.1, 6);
+      barrelGeom.rotateX(Math.PI / 2);
+      const barrelL = new THREE.Mesh(barrelGeom, new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.95 }));
+      barrelL.position.set(-0.06, 0.04, 0.85);
+      this.gunMesh.add(barrelL);
+
+      const barrelR = new THREE.Mesh(barrelGeom, new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.95 }));
+      barrelR.position.set(0.06, 0.04, 0.85);
+      this.gunMesh.add(barrelR);
+
+      // Red scope
+      const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+      scope.position.set(0, 0.21, 0.0);
+      scope.rotation.x = Math.PI / 2;
+      this.gunMesh.add(scope);
+
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), new THREE.MeshBasicMaterial({ color: 0xf43f5e }));
+      lens.position.set(0, 0, 0.22);
+      scope.add(lens);
+    } else {
+      // 3. BRUTAL HEAVY VORTEX CANNON
+      const gunStock = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.42, 1.05),
+        new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.4, metalness: 0.8 })
+      );
+      this.gunMesh.add(gunStock);
+
+      const giantBarrelGeom = new THREE.CylinderGeometry(0.12, 0.15, 1.0, 8);
+      giantBarrelGeom.rotateX(Math.PI / 2);
+      const barrel = new THREE.Mesh(giantBarrelGeom, new THREE.MeshStandardMaterial({ color: 0x581c87, metalness: 0.9 }));
+      barrel.position.set(0, 0.06, 0.82);
+      this.gunMesh.add(barrel);
+
+      // Embedded pulsing purple energy core sphere inside generator
+      const coreGeom = new THREE.SphereGeometry(0.18, 12, 12);
+      const core = new THREE.Mesh(coreGeom, new THREE.MeshBasicMaterial({ color: 0xc084fc }));
+      core.position.set(0, 0.06, 0.52);
+      this.gunMesh.add(core);
+
+      // Scope purple
+      const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0x3b0764 }));
+      scope.position.set(0, 0.28, 0.0);
+      scope.rotation.x = Math.PI / 2;
+      this.gunMesh.add(scope);
+
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), new THREE.MeshBasicMaterial({ color: 0xc084fc }));
+      lens.position.set(0, 0, 0.2);
+      scope.add(lens);
+    }
 
     this.playerMesh.add(this.gunMesh);
 
@@ -618,16 +688,20 @@ export class ZombieGame {
       // Spooky Zombie Group (detailed Humanoid model)
       const zombieGroup = new THREE.Group();
 
-      const suitColor = isFast ? 0xef4444 : 0x10b981; // fast ones are red neon, normal green neon
-      const skinColor = isFast ? 0xd97706 : 0x059669;
+      const suitColor = isFast ? 0xff0055 : 0x00ff88; // glowing hot ruby pink/red or toxic super neon green
+      const skinColor = isFast ? 0x7a0c2e : 0x0d5736;
 
       const zombieMat = new THREE.MeshStandardMaterial({
         color: suitColor,
-        roughness: 0.8,
+        roughness: 0.2,
+        emissive: suitColor,
+        emissiveIntensity: 0.45
       });
       const skinMat = new THREE.MeshStandardMaterial({
         color: skinColor,
-        roughness: 0.9,
+        roughness: 0.4,
+        emissive: skinColor,
+        emissiveIntensity: 0.25
       });
 
       // Zombie decaying Chest
@@ -776,26 +850,84 @@ export class ZombieGame {
     }
 
     this.currentAmmo--;
-    this.fireCooldown = 0.20; // rate of fire (200 ms)
+
+    // Choose cooldown & properties based on active tech weapon class
+    let cooldownValue = 0.20;
+    if (this.weaponType === 'plasma_rifle') {
+      cooldownValue = 0.13;
+    } else if (this.weaponType === 'scatter_shotgun') {
+      cooldownValue = 0.65;
+    } else if (this.weaponType === 'vortex_cannon') {
+      cooldownValue = 0.45;
+    }
+    this.fireCooldown = cooldownValue;
 
     // Compute barrel tip relative position to scene
     const barrelDir = new THREE.Vector3(Math.sin(this.playerYaw), 0, Math.cos(this.playerYaw)).normalize();
     const tipPos = this.playerPos.clone().add(barrelDir.clone().setLength(1.8));
-    tipPos.y = 1.3;
+    tipPos.y = 1.35;
 
-    // Create 3D projectile block yellow tracer
-    const bulletGeom = new THREE.BoxGeometry(0.12, 0.12, 0.65);
-    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffea00 });
-    const bMesh = new THREE.Mesh(bulletGeom, bulletMat);
-    bMesh.position.copy(tipPos);
-    bMesh.rotation.y = this.playerYaw;
-    this.scene.add(bMesh);
+    // Muzzle flash color feedback based on weapon
+    let flashColor = 0xffb900;
+    if (this.weaponType === 'plasma_rifle') flashColor = 0x22d3ee;
+    else if (this.weaponType === 'vortex_cannon') flashColor = 0xc084fc;
+    else if (this.weaponType === 'scatter_shotgun') flashColor = 0xf43f5e;
 
-    this.bullets.push({
-      mesh: bMesh,
-      velocity: barrelDir.clone().multiplyScalar(45.0), // high speed laser
-      lifespan: 1400, // 1.4 seconds lifespan
-    });
+    this.muzzleFlashLight.color.setHex(flashColor);
+
+    if (this.weaponType === 'scatter_shotgun') {
+      // 5-bullet shotgun diverging spread system
+      const spreadAngles = [-0.15, -0.075, 0, 0.075, 0.15];
+      spreadAngles.forEach((angleOffset) => {
+        const bulletYaw = this.playerYaw + angleOffset;
+        const spreadDir = new THREE.Vector3(Math.sin(bulletYaw), 0, Math.cos(bulletYaw)).normalize();
+
+        const pelletGeom = new THREE.BoxGeometry(0.12, 0.12, 0.25);
+        const pelletMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+        const pMesh = new THREE.Mesh(pelletGeom, pelletMat);
+        pMesh.position.copy(tipPos);
+        pMesh.rotation.y = bulletYaw;
+        this.scene.add(pMesh);
+
+        this.bullets.push({
+          mesh: pMesh,
+          velocity: spreadDir.multiplyScalar(45.0),
+          lifespan: 750, // shorter range shotgun pellets
+          damage: 24
+        });
+      });
+    } else if (this.weaponType === 'vortex_cannon') {
+      // Slow-moving, heavy orbital purple plasma sphere
+      const sphereGeom = new THREE.SphereGeometry(0.35, 8, 8);
+      const sphereMat = new THREE.MeshBasicMaterial({ color: 0xc084fc });
+      const bMesh = new THREE.Mesh(sphereGeom, sphereMat);
+      bMesh.position.copy(tipPos);
+      bMesh.rotation.y = this.playerYaw;
+      this.scene.add(bMesh);
+
+      this.bullets.push({
+        mesh: bMesh,
+        velocity: barrelDir.multiplyScalar(22.0), // slower heavy projectile
+        lifespan: 2000, // longer lifespan
+        isVortex: true,
+        damage: 85
+      });
+    } else {
+      // Neon plasma rapid burst rifle
+      const bulletGeom = new THREE.BoxGeometry(0.1, 0.1, 0.7);
+      const bulletMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+      const bMesh = new THREE.Mesh(bulletGeom, bulletMat);
+      bMesh.position.copy(tipPos);
+      bMesh.rotation.y = this.playerYaw;
+      this.scene.add(bMesh);
+
+      this.bullets.push({
+        mesh: bMesh,
+        velocity: barrelDir.multiplyScalar(55.0),
+        lifespan: 1400,
+        damage: 38
+      });
+    }
 
     // Muzzle flash feedback
     this.muzzleFlashLight.position.copy(tipPos);
@@ -882,21 +1014,63 @@ export class ZombieGame {
         const distToZ = b.mesh.position.distanceTo(z.mesh.position);
 
         if (distToZ < 1.4) {
-          // Register hit
-          z.health -= 45; // balanced weapon dmg
-          z.isHitFlashing = 0.12; // flash red
           hitRegistered = true;
+          const bulletDmg = b.damage || 38;
 
-          // Paint mesh reddish momentarily
-          this.setMeshColorRecursive(z.mesh, 0xff0000);
+          if (b.isVortex) {
+            // Create a gorgeous visual shockwave expansion sphere
+            const boomGeom = new THREE.SphereGeometry(1.5, 12, 12);
+            const boomMat = new THREE.MeshBasicMaterial({ color: 0xc084fc, transparent: true, opacity: 0.85 });
+            const boom = new THREE.Mesh(boomGeom, boomMat);
+            boom.position.copy(b.mesh.position);
+            this.scene.add(boom);
 
-          if (z.health <= 0) {
-            // Killed zombie!
-            this.scene.remove(z.mesh);
-            this.zombies.splice(j, 1);
-            this.killCount++;
-            this.score += z.scoreReward;
-            this.onScore(this.score);
+            // Animate growing wave effect and cleanup
+            let scaleTime = 0;
+            const animateWave = () => {
+              scaleTime += 0.05;
+              boom.scale.addScalar(0.4);
+              (boom.material as THREE.MeshBasicMaterial).opacity -= 0.12;
+              if (scaleTime < 0.4) {
+                requestAnimationFrame(animateWave);
+              } else {
+                this.scene.remove(boom);
+              }
+            };
+            animateWave();
+
+            // Scurry splash damage across all entities in splash radius
+            for (let k = this.zombies.length - 1; k >= 0; k--) {
+              const otherZ = this.zombies[k];
+              const splashDist = b.mesh.position.distanceTo(otherZ.mesh.position);
+              
+              if (splashDist <= 5.0) {
+                otherZ.health -= bulletDmg;
+                otherZ.isHitFlashing = 0.15;
+                this.setMeshColorRecursive(otherZ.mesh, 0xff0000);
+
+                if (otherZ.health <= 0) {
+                  this.scene.remove(otherZ.mesh);
+                  this.zombies.splice(k, 1);
+                  this.killCount++;
+                  this.score += otherZ.scoreReward;
+                  this.onScore(this.score);
+                }
+              }
+            }
+          } else {
+            // Standard point-impact weapon hit
+            z.health -= bulletDmg;
+            z.isHitFlashing = 0.12;
+            this.setMeshColorRecursive(z.mesh, 0xff0000);
+
+            if (z.health <= 0) {
+              this.scene.remove(z.mesh);
+              this.zombies.splice(j, 1);
+              this.killCount++;
+              this.score += z.scoreReward;
+              this.onScore(this.score);
+            }
           }
           break;
         }
@@ -939,7 +1113,7 @@ export class ZombieGame {
         z.isHitFlashing -= delta;
         if (z.isHitFlashing <= 0) {
           // revert zombie color
-          const defaultColor = z.zombieType === 'fast' ? 0xef4444 : 0x10b981;
+          const defaultColor = z.zombieType === 'fast' ? 0xff0055 : 0x00ff88;
           this.setMeshColorRecursive(z.mesh, defaultColor);
         }
       }
