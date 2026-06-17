@@ -1,0 +1,15 @@
+<gameConfig>
+  <graphics>
+    <quality>high</quality>
+    <shadows>true</shadows>
+  </graphics>
+
+  <controls>
+    <mobile>true</mobile>
+    <keyboard>true</keyboard>
+  </controls>
+
+  <physics>
+    <gravity>9.8</gravity>
+  </physics>
+</gameConfig>

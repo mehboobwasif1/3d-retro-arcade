@@ -1,0 +1,6 @@
+{
+  "name": "3D Game Portal",
+  "description": "A high-performance responsive WebGL 3D gaming launcher featuring five detailed action and arcade games built natively in Three.js.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

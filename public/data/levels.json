@@ -1,0 +1,37 @@
+{
+  "runner": {
+    "startingSpeed": 1.5,
+    "speedIncrement": 0.05,
+    "maxSpeed": 5.0,
+    "obstacleSpawnDistance": 40,
+    "powerupSpawnRate": 0.15
+  },
+  "racing": {
+    "laps": 3,
+    "aiDifficulty": 0.8,
+    "trackWidth": 12,
+    "aiOpponentCount": 3,
+    "driftFriction": 0.96
+  },
+  "zombie": {
+    "initialSpawnCount": 5,
+    "spawnExponent": 1.3,
+    "headshotMultiplier": 2.5,
+    "ammoCapacity": 30,
+    "respawnInterval": 4.0
+  },
+  "maze": {
+    "gridSizeX": 9,
+    "gridSizeY": 9,
+    "wallHeight": 4.0,
+    "fogDensity": 0.15,
+    "timeLimitSeconds": 120
+  },
+  "space": {
+    "asteroidSpawnRate": 0.08,
+    "enemyWaveSize": 6,
+    "bossHealth": 500,
+    "playerLaserSpeed": 4.0,
+    "enemyLaserSpeed": 1.5
+  }
+}

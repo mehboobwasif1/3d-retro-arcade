@@ -1,0 +1,28 @@
+{
+  "general": {
+    "gravity": 9.8,
+    "airResistance": 0.02,
+    "groundFriction": 0.1
+  },
+  "runner": {
+    "jumpVelocity": 12.0,
+    "gravityMultiplier": 2.5,
+    "laneDistance": 4.5
+  },
+  "racing": {
+    "enginePower": 45.0,
+    "brakingPower": 25.0,
+    "maxSteeringAngle": 0.05,
+    "nitroMultiplier": 1.8
+  },
+  "zombie": {
+    "recoilPower": 0.1,
+    "playerSpeed": 5.0,
+    "projectileVelocity": 45.0
+  },
+  "space": {
+    "inertiaDamping": 0.95,
+    "shipSpeed": 8.0,
+    "bulletLifespan": 2000
+  }
+}

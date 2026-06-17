@@ -1,0 +1,49 @@
+{
+  "games": [
+    {
+      "id": "runner",
+      "name": "Endless Runner",
+      "genre": "Action Arcade",
+      "difficulty": "medium",
+      "description": "Dodge obstacles and collect magnetic power-ups as speed increases.",
+      "controls": "A/D or Arrow Keys to switch lanes. Space or Touch Button to jump.",
+      "highScore": 2450
+    },
+    {
+      "id": "racing",
+      "name": "3D Car Racing Game",
+      "genre": "Racing Simulator",
+      "difficulty": "hard",
+      "description": "Race against active AI opponents on a modular neon racing circuit with drift physics and nitro boosts.",
+      "controls": "W/S for Gas/Brake, A/D to steer, Shift to trigger Nitro.",
+      "highScore": 6280
+    },
+    {
+      "id": "zombie",
+      "name": "Zombie Survival Shooter",
+      "genre": "FPS / Survival",
+      "difficulty": "hard",
+      "description": "Defend yourself against creeping waves of low-poly zombies with dynamic pathfinding.",
+      "controls": "W/A/S/D to move, Mouse to aim & Left Click to shoot. Backspace/R to reload.",
+      "highScore": 18200
+    },
+    {
+      "id": "maze",
+      "name": "3D Maze Escape Game",
+      "genre": "Puzzle Adventure",
+      "difficulty": "easy",
+      "description": "Explore procedures of fully randomized 3D mazes under dynamic shadow fog to locate the locked gate key.",
+      "controls": "W/A/S/D or Arrows to explore. Viewport adapts automatically.",
+      "highScore": 1200
+    },
+    {
+      "id": "space",
+      "name": "Space Shooter Game",
+      "genre": "Arcade Shooter",
+      "difficulty": "medium",
+      "description": "Blast through asteroid belts and wave-based alien fighters to challenge the final Boss mothership.",
+      "controls": "W/A/S/D or Mouse to navigate spaceship, Space or Auto-fire to shoot lasers.",
+      "highScore": 9400
+    }
+  ]
+}

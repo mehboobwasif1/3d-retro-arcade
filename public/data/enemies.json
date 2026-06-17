@@ -1,0 +1,30 @@
+{
+  "zombie": {
+    "health": 100,
+    "speed": 1.2,
+    "damage": 10,
+    "scoreReward": 150,
+    "color": "#4ade80"
+  },
+  "zombie_fast": {
+    "health": 60,
+    "speed": 2.2,
+    "damage": 15,
+    "scoreReward": 250,
+    "color": "#f87171"
+  },
+  "alien_grunt": {
+    "health": 40,
+    "speed": 1.5,
+    "damage": 15,
+    "scoreReward": 100,
+    "color": "#38bdf8"
+  },
+  "alien_boss": {
+    "health": 500,
+    "speed": 0.8,
+    "damage": 30,
+    "scoreReward": 1500,
+    "color": "#c084fc"
+  }
+}
