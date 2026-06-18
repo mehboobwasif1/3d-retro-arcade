@@ -24,14 +24,14 @@ export class RacingGame {
   private animationFrameId: number | null = null;
 
   // Car stats
-  private position = new THREE.Vector3(70, 0.45, 0); // Start position on the track
+  private position = new THREE.Vector3(74, 0.45, -5); // Start position on the track centerline staggered slightly back
   private velocity = new THREE.Vector3(0, 0, 0);
-  private yaw = Math.PI / 2; // Facing angle pointing along track forward (north-ish at start)
+  private yaw = 0; // Facing angle pointing straight along track forward (along positive Z-axis at start)
   private speed = 0;
-  private carAccel = 32;
-  private carLimitSpeed = 48;
-  private friction = 0.96;
-  private driftSlippage = 0.92; // Slide factor
+  private carAccel = 36; // Boosted acceleration for easier and faster pickups
+  private carLimitSpeed = 54; // Higher speed capability
+  private friction = 0.982; // Smoother and less resistive gliding coasting
+  private driftSlippage = 0.90; // Better drift control
 
   // Nitrous fuel gauge
   private nitroCapacity = 100;
@@ -105,19 +105,19 @@ export class RacingGame {
 
     this.scene = THREE.Scene ? new THREE.Scene() : new (THREE as any).Scene();
 
-    // Dynamically choose background and fog colors based on theme for maximum visual pop
-    let bgColor = 0x02010c; // default dark futuristic twilight
-    let fogDensity = 0.007;
+    // Dynamically choose light and vibrant background colors (dawn/neon sunset daylight) for pristine contrast
+    let bgColor = 0x2e3563; // Beautiful, bright electric violet-blue dawn
+    let fogDensity = 0.0035; // Lower fog density to keep scenery and opponent cars fully visible
 
     if (this.landscapeTheme === 'wasteland') {
-      bgColor = 0x120305; // deep crimson volcanic ash
-      fogDensity = 0.009;
+      bgColor = 0x48161b; // Volcanic crimson sunrise
+      fogDensity = 0.004;
     } else if (this.landscapeTheme === 'desert') {
-      bgColor = 0x221307; // bright dust canyon twilight
-      fogDensity = 0.008;
+      bgColor = 0x824c16; // Radiant, hot golden-canyon sunset sky
+      fogDensity = 0.004;
     } else if (this.landscapeTheme === 'cybercity') {
-      bgColor = 0x03010b; // deep electric night city
-      fogDensity = 0.006;
+      bgColor = 0x251447; // Electric synth-wave magenta-violet dawn
+      fogDensity = 0.0035;
     }
 
     this.scene.background = new THREE.Color(bgColor);
@@ -139,32 +139,41 @@ export class RacingGame {
   }
 
   private initLights() {
-    // Brighter ambient light to boost color contrast dramatically
-    let ambColor = 0x42468f;
-    let dirColor = 0x00f2ff;
-    let ambIntensity = 3.5; 
-    let dirIntensity = 3.2;
+    // Ultra-bright ambient + primary lights for maximum track visibility and vivid, sparkling sports cars
+    let ambColor = 0x5a5fbf; // Boosted vibrant ambient tone
+    let dirColor = 0xffffff; // Bright, clean primary daylight
+    let ambIntensity = 5.0; 
+    let dirIntensity = 4.5;
 
     if (this.landscapeTheme === 'wasteland') {
-      ambColor = 0x7a3033;
-      dirColor = 0xf97316; // molten orange primary direct light
-      ambIntensity = 3.6;
+      ambColor = 0x9e4347;
+      dirColor = 0xffaa44; // Volcanic bright amber
+      ambIntensity = 5.5;
+      dirIntensity = 5.0;
     } else if (this.landscapeTheme === 'desert') {
-      ambColor = 0x805432;
-      dirColor = 0xfbbf24; // golden desert sun
-      ambIntensity = 3.8;
+      ambColor = 0xb28562;
+      dirColor = 0xfff4b8; // Bright warm canyon sun
+      ambIntensity = 5.8;
+      dirIntensity = 5.2;
     } else if (this.landscapeTheme === 'cybercity') {
-      ambColor = 0x50358a;
-      dirColor = 0xec4899; // vibrant magenta cyberlight
-      ambIntensity = 3.6;
+      ambColor = 0x8158c5;
+      dirColor = 0xff7bc6; // Hot magenta sports arena spotlight
+      ambIntensity = 5.6;
+      dirIntensity = 5.0;
     }
 
     const amb = new THREE.AmbientLight(ambColor, ambIntensity);
     this.scene.add(amb);
 
     const dir = new THREE.DirectionalLight(dirColor, dirIntensity);
-    dir.position.set(20, 60, 40);
+    dir.position.set(20, 80, 40);
+    dir.castShadow = this.settings.shadows && this.settings.quality === 'high';
     this.scene.add(dir);
+
+    // Hemisphere Light is excellent for bringing soft bounce-light and pristine brightness to Three.js scenes
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444466, 2.5);
+    hemi.position.set(0, 100, 0);
+    this.scene.add(hemi);
 
     // Glowing track lamps (point lights along the oval)
     const points = [
@@ -238,14 +247,14 @@ export class RacingGame {
     roadRingGeom.rotateX(-Math.PI / 2);
     roadRingGeom.scale(1.0, 1.0, this.trackRadiusZ / this.trackRadiusX);
 
-    // Brighter ashphalt base for maximum lane guidance and contrast
-    let asphaltColor = 0x090a14;
+    // Brighter asphalt base for maximum lane guidance and contrast (medium slate colors rather than black)
+    let asphaltColor = 0x3b3f5c; // Light sports slate blue
     if (this.landscapeTheme === 'wasteland') {
-      asphaltColor = 0x16131c;
+      asphaltColor = 0x4d3f44; // Bright concrete rust
     } else if (this.landscapeTheme === 'desert') {
-      asphaltColor = 0x1b1411;
+      asphaltColor = 0x5c4f46; // Sandy golden clay road
     } else if (this.landscapeTheme === 'cybercity') {
-      asphaltColor = 0x0b0a1d;
+      asphaltColor = 0x443a6b; // Electric high-contrast purple-indigo asphalt
     }
 
     const roadMat = new THREE.MeshStandardMaterial({
@@ -1177,6 +1186,27 @@ export class RacingGame {
 
   public getSpeed(): number {
     return Math.floor(Math.abs(this.speed) * 3);
+  }
+
+  public getRank(): number {
+    let thetaPlayer = Math.atan2(this.position.z, this.position.x);
+    if (thetaPlayer < 0) thetaPlayer += Math.PI * 2;
+    const playerProgress = (this.currentLap - 1) * Math.PI * 2 + thetaPlayer;
+
+    let rank = 1;
+    this.aiCars.forEach(ai => {
+      // Small starting stagger offset adjustments
+      if (ai.progress > playerProgress - 0.25) {
+        rank++;
+      }
+    });
+    return Math.min(rank, 4);
+  }
+
+  public getRankHeader(): string {
+    const rank = this.getRank();
+    const suffixes = ['st', 'nd', 'rd', 'th'];
+    return `${rank}${suffixes[rank - 1] || 'th'} Place`;
   }
 
   public resize(width: number, height: number) {

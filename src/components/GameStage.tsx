@@ -280,7 +280,7 @@ export default function GameStage({
 
       // Unify physical keyboard coordinates + virtual HUD controllers
       if (gameId === 'racing') {
-        if (keys['w'] || keys['arrowup'] || v.up) inst.accelerate();
+        if (keys['w'] || keys['arrowup'] || v.up || v.actionB) inst.accelerate();
         if (keys['s'] || keys['arrowdown'] || v.down) inst.brake();
         if (keys['a'] || keys['arrowleft'] || v.left) inst.steerLeft();
         if (keys['d'] || keys['arrowright'] || v.right) inst.steerRight();
@@ -289,8 +289,8 @@ export default function GameStage({
         inst.triggerNitro(!!keys['shift'] || v.actionA);
 
         // Update custom subtitle racing metrics in HUD
-        if (inst.getLapInfo) {
-          setGameSpecificMeta(`${inst.getLapInfo()} | Speed: ${inst.getSpeed()} MPH`);
+        if (inst.getLapInfo && inst.getRankHeader) {
+          setGameSpecificMeta(`${inst.getRankHeader()} | ${inst.getLapInfo()} | Speed: ${inst.getSpeed()} MPH`);
         }
       } else if (gameId === 'zombie') {
         let vx = 0;
@@ -413,6 +413,30 @@ export default function GameStage({
     } else if (gameStatus === 'PAUSED') {
       inst.resume();
       setGameStatus('PLAYING');
+    }
+  };
+
+  const getActionALabel = () => {
+    switch (gameId) {
+      case 'runner': return 'JUMP';
+      case 'racing': return 'BOOST ⚡';
+      case 'zombie': return 'SHOOT 🔫';
+      case 'maze': return 'SPRINT';
+      case 'space': return 'LASER 💥';
+      case 'landscape': return 'DECEL';
+      default: return 'ACTION A';
+    }
+  };
+
+  const getActionBLabel = () => {
+    switch (gameId) {
+      case 'runner': return 'SLOWER';
+      case 'racing': return 'GAS 🏎️';
+      case 'zombie': return 'RELOAD';
+      case 'maze': return 'N/A';
+      case 'space': return 'SHIELD';
+      case 'landscape': return 'LAND';
+      default: return 'ACTION B';
     }
   };
 
@@ -1057,7 +1081,7 @@ export default function GameStage({
                 className="w-16 h-16 bg-gradient-to-tr from-fuchsia-950 to-purple-900 active:from-fuchsia-500 active:to-fuchsia-400 border border-fuchsia-500/50 rounded-full font-mono text-xs font-extrabold text-fuchsia-200 shadow-[0_0_12px_rgba(240,70,239,0.3)] hover:scale-105 active:scale-95 transition flex items-center justify-center uppercase select-none cursor-pointer"
                 id="btn-vact-a"
               >
-                Jump/Fire
+                {getActionALabel()}
               </button>
             </div>
 
@@ -1072,7 +1096,7 @@ export default function GameStage({
                 className="w-14 h-14 bg-gradient-to-tr from-slate-950 to-slate-800 active:from-cyan-500 active:to-cyan-400 border border-cyan-500/50 rounded-full font-mono text-[10px] text-cyan-200 shadow-md hover:scale-105 active:scale-95 transition flex items-center justify-center uppercase select-none cursor-pointer"
                 id="btn-vact-b"
               >
-                Modifier
+                {getActionBLabel()}
               </button>
             </div>
           </div>
