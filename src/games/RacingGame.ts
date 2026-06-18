@@ -1093,7 +1093,7 @@ export class RacingGame {
     });
 
     // Check Lap progress crossings
-    const angle = Math.atan2(this.position.z, this.position.x);
+    const angle = Math.atan2(this.position.z / this.trackRadiusZ, this.position.x / this.trackRadiusX);
 
     // Checkpoint pass: at theta ~= PI opposite corner
     if (angle > 2.8 || angle < -2.8) {
@@ -1147,7 +1147,7 @@ export class RacingGame {
   }
 
   private constrainPlayerToTrack(delta: number) {
-    const thetaPlayer = Math.atan2(this.position.z, this.position.x);
+    const thetaPlayer = Math.atan2(this.position.z / this.trackRadiusZ, this.position.x / this.trackRadiusX);
 
     // Ideal centerline point
     const idealcX = this.trackRadiusX * Math.cos(thetaPlayer);
@@ -1189,7 +1189,7 @@ export class RacingGame {
   }
 
   public getRank(): number {
-    let thetaPlayer = Math.atan2(this.position.z, this.position.x);
+    let thetaPlayer = Math.atan2(this.position.z / this.trackRadiusZ, this.position.x / this.trackRadiusX);
     if (thetaPlayer < 0) thetaPlayer += Math.PI * 2;
     const playerProgress = (this.currentLap - 1) * Math.PI * 2 + thetaPlayer;
 
