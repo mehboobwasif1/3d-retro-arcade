@@ -11,6 +11,7 @@ export interface GameSettings {
 }
 
 export interface PlayerStats {
+  profileName?: string; // Optional custom name
   level: number;
   xp: number;
   nextLevelXp: number;
@@ -23,6 +24,14 @@ export interface PlayerStats {
     icon: string;
     unlocked: boolean;
   }>;
+}
+
+export interface ScoreboardEntry {
+  id: string;
+  gameId: GameId;
+  playerName: string;
+  score: number;
+  date: string;
 }
 
 export interface GameMeta {

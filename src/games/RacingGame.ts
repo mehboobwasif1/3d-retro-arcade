@@ -140,23 +140,23 @@ export class RacingGame {
 
   private initLights() {
     // Brighter ambient light to boost color contrast dramatically
-    let ambColor = 0x181a44;
+    let ambColor = 0x42468f;
     let dirColor = 0x00f2ff;
-    let ambIntensity = 2.4; 
-    let dirIntensity = 2.2;
+    let ambIntensity = 3.5; 
+    let dirIntensity = 3.2;
 
     if (this.landscapeTheme === 'wasteland') {
-      ambColor = 0x451214;
+      ambColor = 0x7a3033;
       dirColor = 0xf97316; // molten orange primary direct light
-      ambIntensity = 2.6;
+      ambIntensity = 3.6;
     } else if (this.landscapeTheme === 'desert') {
-      ambColor = 0x4b2a12;
+      ambColor = 0x805432;
       dirColor = 0xfbbf24; // golden desert sun
-      ambIntensity = 2.8;
+      ambIntensity = 3.8;
     } else if (this.landscapeTheme === 'cybercity') {
-      ambColor = 0x241445;
+      ambColor = 0x50358a;
       dirColor = 0xec4899; // vibrant magenta cyberlight
-      ambIntensity = 2.6;
+      ambIntensity = 3.6;
     }
 
     const amb = new THREE.AmbientLight(ambColor, ambIntensity);

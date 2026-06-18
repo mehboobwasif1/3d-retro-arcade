@@ -55,6 +55,8 @@ export class LandscapeGame {
 
   // UI elements created dynamically in DOM
   private uiOverlayPanel: HTMLDivElement | null = null;
+  private toggleButton: HTMLButtonElement | null = null;
+  private isPanelExpanded = window.innerWidth >= 768; // collapses by default on mobile!
 
   constructor(
     container: HTMLElement,
@@ -84,8 +86,9 @@ export class LandscapeGame {
     const height = this.container.clientHeight || 500;
 
     this.scene = THREE.Scene ? new THREE.Scene() : new (THREE as any).Scene();
-    this.scene.background = new THREE.Color(0x020617);
-    this.scene.fog = new THREE.FogExp2(0x020617, 0.015);
+    // Beautiful, high luminosity daylight dusk-blue sky yields maximum contrast
+    this.scene.background = new THREE.Color(0x2b395e);
+    this.scene.fog = new THREE.FogExp2(0x2b395e, 0.008);
 
     this.camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 300);
     this.camera.position.set(0, 15, 18);
@@ -104,10 +107,11 @@ export class LandscapeGame {
   }
 
   private initLights() {
-    const ambient = new THREE.AmbientLight(0x1e1b4b, 1.2);
+    // Highly elevated ambient fill levels so models are bright and clearly distinguishable
+    const ambient = new THREE.AmbientLight(0x7387cc, 2.5);
     this.scene.add(ambient);
 
-    const mainDirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    const mainDirLight = new THREE.DirectionalLight(0xffffff, 2.8);
     mainDirLight.position.set(20, 45, 15);
     mainDirLight.castShadow = this.settings.shadows && this.settings.quality === 'high';
     if (mainDirLight.castShadow) {
@@ -528,20 +532,51 @@ export class LandscapeGame {
   }
 
   // --- INTERACTIVE CODES & PARAMETERS UI PANEL ---
+  private syncPanelDisplay() {
+    if (!this.uiOverlayPanel || !this.toggleButton) return;
+    if (this.isPanelExpanded) {
+      this.uiOverlayPanel.style.display = 'block';
+      this.toggleButton.innerHTML = `✕ CLOSE PANEL`;
+      this.toggleButton.className = 'absolute left-4 top-20 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[11px] tracking-widest uppercase rounded-xl px-4 py-2.5 z-20 pointer-events-auto shadow-lg flex items-center gap-1.5 cursor-pointer font-mono border border-rose-450 transition-all';
+    } else {
+      this.uiOverlayPanel.style.display = 'none';
+      this.toggleButton.innerHTML = `⚙️ CONFIGURE BIOME`;
+      this.toggleButton.className = 'absolute left-4 top-20 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-[11px] tracking-widest uppercase rounded-xl px-4 py-2.5 z-20 pointer-events-auto shadow-lg flex items-center gap-1.5 cursor-pointer font-mono border border-emerald-300 transition-all';
+    }
+  }
+
   private createUIOverlay() {
-    // Check if duplicate element exists and clean it
+    // Check if duplicate elements exist and clean them
     const priorElement = document.getElementById('landscape-sandbox-dashboard-overlay');
     if (priorElement && priorElement.parentNode) {
       priorElement.parentNode.removeChild(priorElement);
     }
+    const priorToggle = document.getElementById('landscape-sandbox-toggle-btn');
+    if (priorToggle && priorToggle.parentNode) {
+      priorToggle.parentNode.removeChild(priorToggle);
+    }
+
+    // Toggle button to expand/collapse panel to satisfy touch screen & mobile views
+    this.toggleButton = document.createElement('button');
+    this.toggleButton.id = 'landscape-sandbox-toggle-btn';
+    this.container.appendChild(this.toggleButton);
+
+    this.toggleButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.isPanelExpanded = !this.isPanelExpanded;
+      this.syncPanelDisplay();
+    });
 
     this.uiOverlayPanel = document.createElement('div');
     this.uiOverlayPanel.id = 'landscape-sandbox-dashboard-overlay';
-    // Style cleanly with tailwind class attributes
-    this.uiOverlayPanel.className = 'absolute left-4 top-20 bg-slate-950/85 border border-emerald-500/30 rounded-2xl p-4 w-72 sm:w-80 text-slate-100 z-10 pointer-events-auto shadow-[0_0_25px_rgba(16,185,129,0.15)] space-y-4 max-h-[75vh] overflow-y-auto backdrop-blur-md select-none font-mono text-left transition-all hover:border-emerald-400/50';
+    // Position slightly below to accommodate the toggle-button without intersection overlap
+    this.uiOverlayPanel.className = 'absolute left-4 top-36 bg-slate-950/85 border border-emerald-500/30 rounded-2xl p-4 w-72 sm:w-80 text-slate-100 z-10 pointer-events-auto shadow-[0_0_25px_rgba(16,185,129,0.15)] space-y-4 max-h-[60vh] overflow-y-auto backdrop-blur-md select-none font-mono text-left transition-all hover:border-emerald-400/50';
 
     this.renderUIContent();
     this.container.appendChild(this.uiOverlayPanel);
+
+    // Initial draw synchronization
+    this.syncPanelDisplay();
   }
 
   private renderUIContent() {
@@ -941,6 +976,11 @@ export class LandscapeGame {
     if (this.uiOverlayPanel && this.uiOverlayPanel.parentNode) {
       this.uiOverlayPanel.parentNode.removeChild(this.uiOverlayPanel);
       this.uiOverlayPanel = null;
+    }
+
+    if (this.toggleButton && this.toggleButton.parentNode) {
+      this.toggleButton.parentNode.removeChild(this.toggleButton);
+      this.toggleButton = null;
     }
 
     this.clearLandscapeMeshes();

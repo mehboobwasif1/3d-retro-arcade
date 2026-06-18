@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameMeta, PlayerStats, GameSettings } from '../types';
-import { Trophy, Shield, HelpCircle, Flame, Star, Volume2, Search, Sliders, Play, Trash2, Smartphone, Monitor } from 'lucide-react';
+import { Trophy, Shield, HelpCircle, Flame, Star, Volume2, Search, Sliders, Play, Trash2, Smartphone, Monitor, Edit3 } from 'lucide-react';
 
 interface MainDashboardProps {
   games: GameMeta[];
@@ -9,6 +9,7 @@ interface MainDashboardProps {
   onLaunchGame: (id: string) => void;
   onUpdateSettings: (settings: GameSettings) => void;
   onResetStats: () => void;
+  onUpdateName?: (name: string) => void;
 }
 
 export default function MainDashboard({
@@ -18,10 +19,36 @@ export default function MainDashboard({
   onLaunchGame,
   onUpdateSettings,
   onResetStats,
+  onUpdateName,
 }: MainDashboardProps) {
   const [search, setSearch] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(stats.profileName || 'Neon Pilot');
+  const [scoreboard, setScoreboard] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    setTempName(stats.profileName || 'Neon Pilot');
+  }, [stats.profileName]);
+
+  React.useEffect(() => {
+    const existing = localStorage.getItem('neon_portal_scoreboard');
+    if (existing) {
+      try {
+        setScoreboard(JSON.parse(existing));
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleSaveName = () => {
+    setIsEditingName(false);
+    const trimmed = tempName.trim();
+    if (trimmed && onUpdateName) {
+      onUpdateName(trimmed);
+    }
+  };
 
   const filteredGames = games.filter((g) => {
     const matchesSearch = g.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -51,8 +78,32 @@ export default function MainDashboard({
               <Flame size={20} />
             </div>
             <div>
-              <div className="text-[10px] text-cyan-200/60 font-mono tracking-wider uppercase">Player Title</div>
-              <div className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-300 font-mono">
+              <div className="text-[10px] text-cyan-200/60 font-mono tracking-wider uppercase">Player Profile</div>
+              <div className="flex items-center gap-1.5 min-h-[22px]">
+                {isEditingName ? (
+                  <input
+                    type="text"
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onBlur={handleSaveName}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); }}
+                    maxLength={15}
+                    className="bg-slate-900 border border-cyan-400 text-xs font-mono text-cyan-100 rounded px-1.5 py-0.5 focus:outline-none w-28"
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    onClick={() => setIsEditingName(true)}
+                    className="text-xs font-bold text-cyan-300 font-mono hover:text-white cursor-pointer flex items-center gap-1.5 group/name"
+                    title="Click to change name"
+                    id="profile-name-editable"
+                  >
+                    {stats.profileName || 'Neon Pilot'}
+                    <Edit3 size={11} className="text-cyan-400/50 group-hover/name:text-cyan-300" />
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] font-semibold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-300 font-mono">
                 Level {stats.level} Elite
               </div>
             </div>
@@ -364,7 +415,45 @@ export default function MainDashboard({
             </div>
           </div>
 
-          {/* PLAYER ACHIEVEMENTS AND STATS */}
+          {/* LOCAL DEVICE ARCADE LEADERBOARD */}
+          <div className="bg-gradient-to-br from-slate-950 to-purple-950/40 border border-purple-500/20 rounded-2xl p-6 space-y-4 backdrop-blur-md shadow-xl text-left">
+            <h2 className="text-lg font-bold font-mono text-cyan-400 border-b border-purple-500/10 pb-2 uppercase tracking-wide flex items-center gap-2">
+              <Trophy size={18} />
+              Device Arcade Hall of Fame
+            </h2>
+
+            {scoreboard.length === 0 ? (
+              <div className="text-slate-500 text-[10px] italic font-mono text-center py-4 uppercase">
+                // No runs recorded yet on this device.
+                <br />Finish a game to register your score!
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {scoreboard.map((entry, idx) => (
+                  <div
+                    key={entry.id || idx}
+                    className="bg-slate-900/65 border border-purple-500/10 rounded-lg p-2.5 flex justify-between items-center text-xs font-mono group hover:border-purple-500/30 transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-purple-400 font-extrabold w-4">#{idx + 1}</span>
+                      <div>
+                        <span className="font-sans font-bold text-slate-100 uppercase tracking-tight group-hover:text-cyan-300 transition-colors">
+                          {entry.playerName}
+                        </span>
+                        <div className="text-[8px] text-purple-400/65 uppercase mt-0.5">
+                          {entry.gameId?.toUpperCase()} • {entry.date ? new Date(entry.date).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-yellow-300 font-bold tracking-widest text-[13px]">{entry.score?.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="bg-gradient-to-br from-slate-950 to-purple-950/40 border border-purple-500/20 rounded-2xl p-6 space-y-4 backdrop-blur-md shadow-xl text-left">
             <h2 className="text-lg font-bold font-mono text-fuchsia-400 border-b border-purple-500/10 pb-2 uppercase tracking-wide flex items-center gap-2">
               <Trophy size={18} />

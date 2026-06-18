@@ -85,12 +85,12 @@ export class RunnerGame {
     const height = this.container.clientHeight || 500;
 
     this.scene = THREE.Scene ? new THREE.Scene() : new (THREE as any).Scene();
-    this.scene.background = new THREE.Color(0x020008);
-    // Neon mist fog
-    this.scene.fog = new THREE.FogExp2(0x020008, 0.012);
+    // Bright indigo cyber grid sky dome for solid visual contrast
+    this.scene.background = new THREE.Color(0x1a1230);
+    this.scene.fog = new THREE.FogExp2(0x1a1230, 0.008);
 
     this.camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 1000);
-    // Over-the-shoulder third person view
+    // Over the shoulder third person view
     this.camera.position.set(0, 4.2, 5.5);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -106,14 +106,15 @@ export class RunnerGame {
   }
 
   private initLights() {
-    const spaceAmb = new THREE.AmbientLight(0x0b0417, 1.8);
+    // Elevate game world ambient light fill
+    const spaceAmb = new THREE.AmbientLight(0x4a347a, 2.8);
     this.scene.add(spaceAmb);
 
-    const keyFlash = new THREE.DirectionalLight(0xa855f7, 2.2);
+    const keyFlash = new THREE.DirectionalLight(0xa855f7, 3.2);
     keyFlash.position.set(10, 20, 10);
     this.scene.add(keyFlash);
 
-    const blueSpot = new THREE.PointLight(0x00f2ff, 4, 30);
+    const blueSpot = new THREE.PointLight(0x00f2ff, 5.5, 30);
     blueSpot.position.set(0, 6, -15);
     this.scene.add(blueSpot);
   }

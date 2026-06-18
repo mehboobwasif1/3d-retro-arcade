@@ -33,6 +33,70 @@ export default function GameStage({
   const [gameStatus, setGameStatus] = useState<GameStatus>('LOADING');
   const [showGuide, setShowGuide] = useState<boolean>(true);
 
+  // Scoreboard Save States
+  const [tempPlayerName, setTempPlayerName] = useState<string>('');
+  const [isScoreSavedLocal, setIsScoreSavedLocal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (gameStatus === 'GAMEOVER' || gameStatus === 'VICTORY') {
+      const statsNode = localStorage.getItem('neon_portal_stats');
+      if (statsNode) {
+        try {
+          const parsed = JSON.parse(statsNode);
+          if (parsed?.profileName) {
+            setTempPlayerName(parsed.profileName);
+          } else {
+            setTempPlayerName('Neon Pilot');
+          }
+        } catch(e) {
+          setTempPlayerName('Neon Pilot');
+        }
+      } else {
+        setTempPlayerName('Neon Pilot');
+      }
+      setIsScoreSavedLocal(false);
+    }
+  }, [gameStatus]);
+
+  const handleSaveToScoreboard = () => {
+    if (isScoreSavedLocal) return;
+
+    const entryName = tempPlayerName.trim() || 'Neon Pilot';
+
+    // Store custom name update on local stats so subsequent plays prefill with it
+    const statsNode = localStorage.getItem('neon_portal_stats');
+    if (statsNode) {
+      try {
+        const parsed = JSON.parse(statsNode);
+        parsed.profileName = entryName;
+        localStorage.setItem('neon_portal_stats', JSON.stringify(parsed));
+      } catch (e) {}
+    }
+
+    const entry = {
+      id: Math.random().toString(36).substring(2, 9),
+      gameId: gameId,
+      playerName: entryName,
+      score: score,
+      date: new Date().toISOString()
+    };
+
+    const existing = localStorage.getItem('neon_portal_scoreboard');
+    let scoreboardList = [];
+    if (existing) {
+      try {
+        scoreboardList = JSON.parse(existing);
+      } catch (e) {}
+    }
+
+    scoreboardList.push(entry);
+    scoreboardList.sort((a: any, b: any) => b.score - a.score);
+    scoreboardList = scoreboardList.slice(0, 50);
+
+    localStorage.setItem('neon_portal_scoreboard', JSON.stringify(scoreboardList));
+    setIsScoreSavedLocal(true);
+  };
+
   // Custom pre-game customization options State
   const [selectedCarModel, setSelectedCarModel] = useState<string>('cyber_coupe');
   const [selectedLandscape, setSelectedLandscape] = useState<string>('cybercity');
@@ -793,33 +857,59 @@ export default function GameStage({
 
         {/* GAME OVER STATE OVERLAY */}
         {gameStatus === 'GAMEOVER' && (
-          <div className="absolute inset-0 bg-red-950/80 backdrop-blur-md z-30 flex flex-col items-center justify-center gap-6 animate-fade-in text-center p-4">
-            <div className="space-y-3">
-              <h2 className="text-5xl md:text-6xl font-mono tracking-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-rose-500 to-red-800 drop-shadow-[0_0_15px_rgba(244,63,94,0.4)] uppercase">
+          <div className="absolute inset-0 bg-red-950/80 backdrop-blur-md z-30 flex flex-col items-center justify-center gap-4 animate-fade-in text-center p-4">
+            <div className="space-y-2">
+              <h2 className="text-4xl md:text-5xl font-mono tracking-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-rose-500 to-red-800 drop-shadow-[0_0_15px_rgba(244,63,94,0.4)] uppercase animate-pulse">
                 System Depleted
               </h2>
-              <p className="text-xs md:text-sm text-rose-300/60 font-mono uppercase tracking-widest">
+              <p className="text-[10px] md:text-xs text-rose-300/60 font-mono uppercase tracking-widest">
                 // CRITICAL STRUCTURAL CRASH REGISTERED
               </p>
             </div>
 
-            <div className="bg-slate-950/90 border border-red-500/30 rounded-2xl p-6 min-w-[280px] space-y-2">
-              <div className="text-[10px] font-mono text-purple-300 uppercase">Current Score</div>
-              <div className="text-4xl font-mono font-bold text-yellow-300">{score.toLocaleString()}</div>
+            <div className="bg-slate-950/90 border border-red-500/30 rounded-2xl p-4 min-w-[280px] space-y-1">
+              <div className="text-[9px] font-mono text-purple-300 uppercase">Current Score</div>
+              <div className="text-3xl font-mono font-bold text-yellow-300">{score.toLocaleString()}</div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            {/* ARCADE LEADERBOARD FORM */}
+            <div className="bg-slate-950/95 border border-purple-500/20 rounded-2xl p-4 w-full max-w-[300px] space-y-2.5 text-left shadow-2xl backdrop-blur-md">
+              <div className="text-[9px] font-mono text-cyan-400 font-bold uppercase tracking-wider">// REGISTER ARCADE RUN</div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Your Nickname (Optional)"
+                  value={tempPlayerName}
+                  onChange={(e) => setTempPlayerName(e.target.value)}
+                  maxLength={15}
+                  className="bg-slate-900 border border-purple-500/30 rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 w-full"
+                />
+                <button
+                  onClick={handleSaveToScoreboard}
+                  disabled={isScoreSavedLocal}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-mono font-extrabold tracking-widest transition-all uppercase ${
+                    isScoreSavedLocal
+                      ? 'bg-purple-950/50 text-purple-500 border border-purple-950 cursor-not-allowed'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-black cursor-pointer border border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.3)] animate-pulse'
+                  }`}
+                >
+                  {isScoreSavedLocal ? 'Saved' : 'Register'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleRestart}
-                className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm font-mono tracking-wider transition cursor-pointer flex items-center gap-2 shadow-[0_0_12px_rgba(244,63,94,0.4)]"
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(244,63,94,0.4)]"
                 id="btn-go-retry"
               >
-                <RotateCcw size={16} className="animate-spin-slow" />
+                <RotateCcw size={14} className="animate-spin-slow" />
                 RETRY LEVEL
               </button>
               <button
                 onClick={onExit}
-                className="px-6 py-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl text-sm font-mono text-slate-300 tracking-wider transition cursor-pointer"
+                className="px-5 py-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono text-slate-300 tracking-wider transition cursor-pointer"
                 id="btn-go-exit"
               >
                 BACK TO PORTAL
@@ -830,35 +920,61 @@ export default function GameStage({
 
         {/* VICTORY/WIN STATE OVERLAY */}
         {gameStatus === 'VICTORY' && (
-          <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-md z-30 flex flex-col items-center justify-center gap-6 animate-fade-in text-center p-4">
-            <div className="space-y-3">
-              <h2 className="text-5xl md:text-6xl font-mono tracking-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-emerald-400 to-teal-500 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)] uppercase">
+          <div className="absolute inset-0 bg-emerald-950/80 backdrop-blur-md z-30 flex flex-col items-center justify-center gap-4 animate-fade-in text-center p-4">
+            <div className="space-y-2">
+              <h2 className="text-4xl md:text-5xl font-mono tracking-tight font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-emerald-400 to-teal-500 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)] uppercase animate-bounce">
                 Grid Dominated
               </h2>
-              <p className="text-xs md:text-sm text-emerald-300/60 font-mono uppercase tracking-widest">
+              <p className="text-[10px] md:text-xs text-emerald-300/60 font-mono uppercase tracking-widest">
                 // COMPLETED LEVEL PARAMETERS VICTORIOUSLY
               </p>
             </div>
 
-            <div className="bg-slate-950/90 border border-emerald-500/30 rounded-2xl p-6 min-w-[280px] space-y-2">
-              <div className="text-[10px] font-mono text-purple-300 uppercase">Final Victory Score</div>
-              <div className="text-4xl font-mono font-bold text-yellow-300">{score.toLocaleString()}</div>
+            <div className="bg-slate-950/90 border border-emerald-500/30 rounded-2xl p-4 min-w-[280px] space-y-1">
+              <div className="text-[9px] font-mono text-purple-300 uppercase">Final Victory Score</div>
+              <div className="text-3xl font-mono font-bold text-yellow-300">{score.toLocaleString()}</div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            {/* ARCADE LEADERBOARD FORM */}
+            <div className="bg-slate-950/95 border border-purple-500/20 rounded-2xl p-4 w-full max-w-[300px] space-y-2.5 text-left shadow-2xl backdrop-blur-md">
+              <div className="text-[9px] font-mono text-cyan-400 font-bold uppercase tracking-wider">// REGISTER ARCADE RUN</div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Your Nickname (Optional)"
+                  value={tempPlayerName}
+                  onChange={(e) => setTempPlayerName(e.target.value)}
+                  maxLength={15}
+                  className="bg-slate-900 border border-purple-500/30 rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400 w-full"
+                />
+                <button
+                  onClick={handleSaveToScoreboard}
+                  disabled={isScoreSavedLocal}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-mono font-extrabold tracking-widest transition-all uppercase ${
+                    isScoreSavedLocal
+                      ? 'bg-purple-950/50 text-purple-500 border border-purple-950 cursor-not-allowed'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-black cursor-pointer border border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                  }`}
+                >
+                  {isScoreSavedLocal ? 'Saved' : 'Register'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={onExit}
-                className="px-7 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold rounded-xl text-sm font-mono tracking-wider transition cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold rounded-xl text-xs font-mono tracking-wider transition cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.5)]"
                 id="btn-victory-exit"
               >
                 RETURN HOME
               </button>
               <button
                 onClick={handleRestart}
-                className="px-6 py-3.5 bg-slate-950 hover:bg-slate-900 border border-emerald-500/20 rounded-xl text-sm font-mono text-emerald-300 tracking-wider transition cursor-pointer flex items-center gap-2"
+                className="px-5 py-3 bg-slate-950 hover:bg-slate-900 border border-emerald-500/20 rounded-xl text-xs font-mono text-emerald-300 tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5"
                 id="btn-victory-retry"
               >
-                <RotateCcw size={16} />
+                <RotateCcw size={14} />
                 RETREAD LEVEL
               </button>
             </div>

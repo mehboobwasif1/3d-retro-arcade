@@ -81,9 +81,9 @@ export class MazeGame {
     const height = this.container.clientHeight || 500;
 
     this.scene = THREE.Scene ? new THREE.Scene() : new (THREE as any).Scene();
-    // Mossy castle dungeon fog style
-    this.scene.background = new THREE.Color(0x010204);
-    this.scene.fog = new THREE.FogExp2(0x010204, 0.12);
+    // High contrast slate indigo background
+    this.scene.background = new THREE.Color(0x1e1e2f);
+    this.scene.fog = new THREE.FogExp2(0x1e1e2f, 0.02);
 
     this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
     this.camera.position.set(0, 11, 4);
@@ -101,17 +101,17 @@ export class MazeGame {
   }
 
   private initLights() {
-    // Dim spooky dungeon ambient light
-    const dungeonAmbient = new THREE.AmbientLight(0x0a120c, 1.0);
+    // Elevate dungeon fill levels so player can clearly see maze pathways and exits
+    const dungeonAmbient = new THREE.AmbientLight(0x4b437a, 2.6);
     this.scene.add(dungeonAmbient);
 
     // Moonlight tint
-    const moon = new THREE.DirectionalLight(0x4a5568, 1.5);
+    const moon = new THREE.DirectionalLight(0x818cf8, 2.5);
     moon.position.set(10, 25, 10);
     this.scene.add(moon);
 
-    // Real Flashlight torch held by user
-    const explorerSpotlight = new THREE.PointLight(0xfff7ed, 4.0, 16);
+    // Warm high luminosity explorer spotlight held by player
+    const explorerSpotlight = new THREE.PointLight(0xfffae0, 6.0, 24);
     explorerSpotlight.position.set(0, 1.8, 0);
     this.scene.add(explorerSpotlight);
     (this as any).playerLight = explorerSpotlight;

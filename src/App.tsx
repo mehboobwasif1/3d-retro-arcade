@@ -75,6 +75,7 @@ const FALLBACK_GAMES: GameMeta[] = [
 ];
 
 const INITIAL_STATS: PlayerStats = {
+  profileName: 'Neon Pilot',
   level: 1,
   xp: 0,
   nextLevelXp: 5000,
@@ -195,6 +196,14 @@ export default function App() {
     }
   }, []);
 
+  const handleUpdateName = (newName: string) => {
+    setStats((prev) => {
+      const nextStats = { ...prev, profileName: newName };
+      localStorage.setItem('neon_portal_stats', JSON.stringify(nextStats));
+      return nextStats;
+    });
+  };
+
   const handleUpdateSettings = (updated: GameSettings) => {
     setSettings(updated);
     localStorage.setItem('neon_portal_settings', JSON.stringify(updated));
@@ -295,6 +304,7 @@ export default function App() {
               onLaunchGame={handleLaunchGame}
               onUpdateSettings={handleUpdateSettings}
               onResetStats={handleResetStats}
+              onUpdateName={handleUpdateName}
             />
           </motion.div>
         ) : (
